@@ -56,16 +56,19 @@ const STATUS_META: Record<Status, { label: string; className: string; dot: strin
   },
 };
 
-// Stickers pinned to page margins so they never overlap the tracker card.
+// Stickers pinned to page margins, evenly distributed on left and right sides.
 const STICKERS = [
-  { src: stickerKurisu, style: { top: "4%", left: "1.5%" }, size: 118, r: "-9deg", delay: "0s" },
-  { src: stickerViolet, style: { top: "3%", right: "1.5%" }, size: 112, r: "8deg", delay: "0.5s" },
-  { src: stickerSkirk, style: { top: "34%", left: "1%" }, size: 108, r: "5deg", delay: "1s" },
-  { src: stickerNavia, style: { top: "34%", right: "1%" }, size: 110, r: "-6deg", delay: "1.4s" },
-  { src: stickerMahiru, style: { bottom: "6%", left: "2%" }, size: 108, r: "-4deg", delay: "0.8s" },
-  { src: stickerKaori, style: { bottom: "18%", right: "2%" }, size: 110, r: "7deg", delay: "0.2s" },
-  { src: stickerSandrone, style: { bottom: "3%", right: "10%" }, size: 96, r: "-10deg", delay: "1.2s" },
+  // Left column — 4 stickers evenly spaced
+  { src: stickerKurisu, style: { top: "6%", left: "1.5%" }, size: 118, r: "-9deg", delay: "0s" },
+  { src: stickerSkirk, style: { top: "30%", left: "1%" }, size: 112, r: "5deg", delay: "0.6s" },
+  { src: stickerMahiru, style: { top: "54%", left: "1.5%" }, size: 110, r: "-4deg", delay: "1.1s" },
+  { src: stickerSandrone, style: { top: "78%", left: "2%" }, size: 108, r: "-10deg", delay: "1.5s" },
+  // Right column — 3 stickers evenly spaced
+  { src: stickerViolet, style: { top: "6%", right: "1.5%" }, size: 114, r: "8deg", delay: "0.3s" },
+  { src: stickerNavia, style: { top: "38%", right: "1%" }, size: 112, r: "-6deg", delay: "0.9s" },
+  { src: stickerKaori, style: { top: "70%", right: "1.5%" }, size: 110, r: "7deg", delay: "1.3s" },
 ];
+
 
 const MOBILE_STRIP = [stickerKurisu, stickerViolet, stickerMahiru, stickerKaori, stickerSkirk, stickerNavia, stickerSandrone];
 
