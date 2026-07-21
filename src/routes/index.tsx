@@ -214,12 +214,16 @@ function Index() {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <SummaryChip label="Total" value={counts.all} tone="neutral" />
-            <SummaryChip label="In progress" value={counts.progress} tone="progress" />
-            <SummaryChip label="Done" value={counts.done} tone="done" />
+          <div className="flex flex-col items-start gap-3 md:items-end">
+            <ClockWidget />
+            <div className="flex flex-wrap gap-2">
+              <SummaryChip label="Total" value={counts.all} tone="neutral" />
+              <SummaryChip label="In progress" value={counts.progress} tone="progress" />
+              <SummaryChip label="Done" value={counts.done} tone="done" />
+            </div>
           </div>
         </header>
+
 
         {/* Mobile / tablet sticker strip */}
         <div className="mb-6 flex justify-center gap-2 overflow-x-auto pb-1 xl:hidden">
