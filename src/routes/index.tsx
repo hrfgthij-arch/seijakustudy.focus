@@ -56,16 +56,19 @@ const STATUS_META: Record<Status, { label: string; className: string; dot: strin
   },
 };
 
-// Stickers pinned to page margins so they never overlap the tracker card.
+// Stickers pinned to page margins, evenly distributed on left and right sides.
 const STICKERS = [
-  { src: stickerKurisu, style: { top: "4%", left: "1.5%" }, size: 118, r: "-9deg", delay: "0s" },
-  { src: stickerViolet, style: { top: "3%", right: "1.5%" }, size: 112, r: "8deg", delay: "0.5s" },
-  { src: stickerSkirk, style: { top: "34%", left: "1%" }, size: 108, r: "5deg", delay: "1s" },
-  { src: stickerNavia, style: { top: "34%", right: "1%" }, size: 110, r: "-6deg", delay: "1.4s" },
-  { src: stickerMahiru, style: { bottom: "6%", left: "2%" }, size: 108, r: "-4deg", delay: "0.8s" },
-  { src: stickerKaori, style: { bottom: "18%", right: "2%" }, size: 110, r: "7deg", delay: "0.2s" },
-  { src: stickerSandrone, style: { bottom: "3%", right: "10%" }, size: 96, r: "-10deg", delay: "1.2s" },
+  // Left column — 4 stickers evenly spaced
+  { src: stickerKurisu, style: { top: "6%", left: "1.5%" }, size: 118, r: "-9deg", delay: "0s" },
+  { src: stickerSkirk, style: { top: "30%", left: "1%" }, size: 112, r: "5deg", delay: "0.6s" },
+  { src: stickerMahiru, style: { top: "54%", left: "1.5%" }, size: 110, r: "-4deg", delay: "1.1s" },
+  { src: stickerSandrone, style: { top: "78%", left: "2%" }, size: 108, r: "-10deg", delay: "1.5s" },
+  // Right column — 3 stickers evenly spaced
+  { src: stickerViolet, style: { top: "6%", right: "1.5%" }, size: 114, r: "8deg", delay: "0.3s" },
+  { src: stickerNavia, style: { top: "38%", right: "1%" }, size: 112, r: "-6deg", delay: "0.9s" },
+  { src: stickerKaori, style: { top: "70%", right: "1.5%" }, size: 110, r: "7deg", delay: "1.3s" },
 ];
+
 
 const MOBILE_STRIP = [stickerKurisu, stickerViolet, stickerMahiru, stickerKaori, stickerSkirk, stickerNavia, stickerSandrone];
 
@@ -211,12 +214,16 @@ function Index() {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <SummaryChip label="Total" value={counts.all} tone="neutral" />
-            <SummaryChip label="In progress" value={counts.progress} tone="progress" />
-            <SummaryChip label="Done" value={counts.done} tone="done" />
+          <div className="flex flex-col items-start gap-3 md:items-end">
+            <ClockWidget />
+            <div className="flex flex-wrap gap-2">
+              <SummaryChip label="Total" value={counts.all} tone="neutral" />
+              <SummaryChip label="In progress" value={counts.progress} tone="progress" />
+              <SummaryChip label="Done" value={counts.done} tone="done" />
+            </div>
           </div>
         </header>
+
 
         {/* Mobile / tablet sticker strip */}
         <div className="mb-6 flex justify-center gap-2 overflow-x-auto pb-1 xl:hidden">
@@ -435,3 +442,36 @@ function SummaryChip({ label, value, tone }: { label: string; value: number; ton
     </div>
   );
 }
+
+function ClockWidget() {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const time = now
+    ? now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    : "--:--:--";
+  const date = now
+    ? now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })
+    : "";
+
+  return (
+    <div className="inline-flex items-center gap-3 rounded-2xl border border-[color:var(--border)] bg-white/85 px-4 py-2.5 shadow-[var(--shadow-cute)] backdrop-blur">
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-lg">
+        ⏰
+      </div>
+      <div className="flex flex-col leading-tight">
+        <span className="font-mono text-lg font-bold tabular-nums text-foreground tracking-tight">
+          {time}
+        </span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {date}
+        </span>
+      </div>
+    </div>
+  );
+}
+
