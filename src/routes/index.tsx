@@ -442,3 +442,36 @@ function SummaryChip({ label, value, tone }: { label: string; value: number; ton
     </div>
   );
 }
+
+function ClockWidget() {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const time = now
+    ? now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    : "--:--:--";
+  const date = now
+    ? now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })
+    : "";
+
+  return (
+    <div className="inline-flex items-center gap-3 rounded-2xl border border-[color:var(--border)] bg-white/85 px-4 py-2.5 shadow-[var(--shadow-cute)] backdrop-blur">
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-lg">
+        ⏰
+      </div>
+      <div className="flex flex-col leading-tight">
+        <span className="font-mono text-lg font-bold tabular-nums text-foreground tracking-tight">
+          {time}
+        </span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {date}
+        </span>
+      </div>
+    </div>
+  );
+}
+
