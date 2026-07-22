@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 import stickerKurisu from "@/assets/sticker-kurisu.png";
 import stickerViolet from "@/assets/sticker-violet.png";
 import stickerMahiru from "@/assets/sticker-mahiru.png";
@@ -7,113 +7,58 @@ import stickerKaori from "@/assets/sticker-kaori.png";
 import stickerSandrone from "@/assets/sticker-sandrone.png";
 import stickerSkirk from "@/assets/sticker-skirk.png";
 import stickerNavia from "@/assets/sticker-navia.png";
+import { Calendar } from "@/components/ui/calendar";
+import { Donut } from "@/components/Donut";
+import { ClockWidget, StudyTimer } from "@/components/StudyTimer";
+import {
+  DEFAULT_COLUMNS,
+  STATUS_META,
+  subjectStats,
+  uid,
+  useStudyStore,
+  type Column,
+  type Row,
+  type Status,
+} from "@/lib/study-store";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Sakura Bloom — Plan, Study, Progress" },
+      { name: "description", content: "A cozy anime-themed planner: track lessons, plan days on the calendar, and watch each subject bloom." },
+      { property: "og:title", content: "Sakura Bloom — Plan, Study, Progress" },
+      { property: "og:description", content: "A cozy anime-themed planner: track lessons, plan days on the calendar, and watch each subject bloom." },
+    ],
+  }),
   component: Index,
 });
-
-type Status = "todo" | "progress" | "done";
-
-type Column = {
-  id: string;
-  label: string;
-  emoji: string;
-};
-
-type Row = {
-  id: string;
-  values: Record<string, string>;
-  status: Status;
-};
-
-const DEFAULT_COLUMNS: Column[] = [
-  { id: "subject", label: "Subject", emoji: "📘" },
-  { id: "lesson", label: "Lesson", emoji: "✏️" },
-  { id: "description", label: "Description", emoji: "📝" },
-];
-
-const STATUS_META: Record<Status, { label: string; className: string; dot: string; icon: string }> = {
-  todo: {
-    label: "Not started",
-    icon: "○",
-    dot: "bg-[oklch(0.7_0.03_250)]",
-    className:
-      "bg-[oklch(0.95_0.02_250)] text-[oklch(0.4_0.05_250)] border-[oklch(0.86_0.03_250)]",
-  },
-  progress: {
-    label: "In progress",
-    icon: "◐",
-    dot: "bg-[oklch(0.72_0.13_230)]",
-    className:
-      "bg-[oklch(0.94_0.05_230)] text-[oklch(0.35_0.13_240)] border-[oklch(0.82_0.09_230)]",
-  },
-  done: {
-    label: "Completed",
-    icon: "✓",
-    dot: "bg-[oklch(0.55_0.16_260)]",
-    className:
-      "bg-[oklch(0.93_0.06_260)] text-[oklch(0.35_0.14_265)] border-[oklch(0.78_0.11_260)]",
-  },
-};
 
 // Stickers pinned to page margins, evenly distributed on left and right sides.
 const STICKERS = [
   // Left column — 4 stickers evenly spaced
-  { src: stickerKurisu, style: { top: "6%", left: "1.5%" }, size: 118, r: "-9deg", delay: "0s" },
-  { src: stickerSkirk, style: { top: "30%", left: "1%" }, size: 112, r: "5deg", delay: "0.6s" },
-  { src: stickerMahiru, style: { top: "54%", left: "1.5%" }, size: 110, r: "-4deg", delay: "1.1s" },
-  { src: stickerSandrone, style: { top: "78%", left: "2%" }, size: 108, r: "-10deg", delay: "1.5s" },
+  { src: stickerKurisu, style: { top: "8%", left: "1.5%" }, size: 118, r: "-9deg", delay: "0s" },
+  { src: stickerSkirk, style: { top: "32%", left: "1%" }, size: 114, r: "5deg", delay: "0.6s" },
+  { src: stickerMahiru, style: { top: "56%", left: "1.5%" }, size: 112, r: "-4deg", delay: "1.1s" },
+  { src: stickerSandrone, style: { top: "80%", left: "2%" }, size: 110, r: "-10deg", delay: "1.5s" },
   // Right column — 3 stickers evenly spaced
-  { src: stickerViolet, style: { top: "6%", right: "1.5%" }, size: 114, r: "8deg", delay: "0.3s" },
-  { src: stickerNavia, style: { top: "38%", right: "1%" }, size: 112, r: "-6deg", delay: "0.9s" },
-  { src: stickerKaori, style: { top: "70%", right: "1.5%" }, size: 110, r: "7deg", delay: "1.3s" },
+  { src: stickerViolet, style: { top: "14%", right: "1.5%" }, size: 118, r: "8deg", delay: "0.3s" },
+  { src: stickerNavia, style: { top: "46%", right: "1%" }, size: 114, r: "-6deg", delay: "0.9s" },
+  { src: stickerKaori, style: { top: "78%", right: "1.5%" }, size: 112, r: "7deg", delay: "1.3s" },
 ];
-
 
 const MOBILE_STRIP = [stickerKurisu, stickerViolet, stickerMahiru, stickerKaori, stickerSkirk, stickerNavia, stickerSandrone];
 
-const STORAGE_KEY = "sakura-study-tracker-v1";
-
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
-
-function loadState(): { columns: Column[]; rows: Row[] } | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
+function toISO(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function Index() {
-  const [columns, setColumns] = useState<Column[]>(DEFAULT_COLUMNS);
-  const [rows, setRows] = useState<Row[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const { columns, setColumns, rows, setRows } = useStudyStore();
   const [filter, setFilter] = useState<"all" | Status>("all");
-
-  useEffect(() => {
-    const saved = loadState();
-    if (saved && saved.columns?.length) {
-      setColumns(saved.columns);
-      setRows(saved.rows ?? []);
-    } else {
-      setRows([
-        { id: uid(), values: { subject: "Math", lesson: "Integrals", description: "Practice u-substitution" }, status: "progress" },
-        { id: uid(), values: { subject: "Japanese", lesson: "N5 Kanji", description: "Review chapter 3" }, status: "todo" },
-        { id: uid(), values: { subject: "History", lesson: "Edo Period", description: "Notes + timeline" }, status: "done" },
-      ]);
-    }
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ columns, rows }));
-  }, [columns, rows, hydrated]);
+  const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
 
   const visibleRows = useMemo(
     () => (filter === "all" ? rows : rows.filter((r) => r.status === filter)),
@@ -127,14 +72,36 @@ function Index() {
     done: rows.filter((r) => r.status === "done").length,
   }), [rows]);
 
+  const stats = useMemo(() => subjectStats(rows), [rows]);
+  const overallPct = counts.all ? Math.round((counts.done / counts.all) * 100) : 0;
+
+  const plannedDays = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((r) => r.date && set.add(r.date));
+    return Array.from(set).map((s) => {
+      const [y, m, d] = s.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    });
+  }, [rows]);
+
+  const dayRows = useMemo(() => {
+    if (!selectedDay) return [];
+    const iso = toISO(selectedDay);
+    return rows.filter((r) => r.date === iso);
+  }, [rows, selectedDay]);
+
   function addRow() {
     const values: Record<string, string> = {};
     columns.forEach((c) => (values[c.id] = ""));
-    setRows((r) => [...r, { id: uid(), values, status: "todo" }]);
+    setRows((r) => [...r, { id: uid(), values, status: "todo", date: selectedDay ? toISO(selectedDay) : null }]);
   }
 
   function updateCell(rowId: string, colId: string, v: string) {
     setRows((r) => r.map((row) => (row.id === rowId ? { ...row, values: { ...row.values, [colId]: v } } : row)));
+  }
+
+  function updateDate(rowId: string, iso: string | null) {
+    setRows((r) => r.map((row) => (row.id === rowId ? { ...row, date: iso } : row)));
   }
 
   function cycleStatus(rowId: string) {
@@ -151,7 +118,7 @@ function Index() {
     if (!label) return;
     const emoji = window.prompt("An emoji for this column? (optional)", "🔹") || "🔹";
     const id = label.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + uid().slice(0, 4);
-    setColumns((c) => [...c, { id, label, emoji }]);
+    setColumns((c: Column[]) => [...c, { id, label, emoji }]);
     setRows((rs) => rs.map((r) => ({ ...r, values: { ...r.values, [id]: "" } })));
   }
 
@@ -160,13 +127,13 @@ function Index() {
     if (!col) return;
     const label = window.prompt("Rename column", col.label);
     if (!label) return;
-    setColumns((c) => c.map((x) => (x.id === colId ? { ...x, label } : x)));
+    setColumns((c: Column[]) => c.map((x) => (x.id === colId ? { ...x, label } : x)));
   }
 
   function deleteColumn(colId: string) {
     if (columns.length <= 1) return;
     if (!window.confirm("Delete this column?")) return;
-    setColumns((c) => c.filter((x) => x.id !== colId));
+    setColumns((c: Column[]) => c.filter((x) => x.id !== colId));
     setRows((rs) => rs.map((r) => {
       const rest = { ...r.values };
       delete rest[colId];
@@ -189,8 +156,6 @@ function Index() {
               width: s.size,
               height: s.size,
               transform: `rotate(${s.r})`,
-              // @ts-expect-error css var
-              "--r": s.r,
               animationDelay: s.delay,
             }}
             loading="lazy"
@@ -198,24 +163,35 @@ function Index() {
         ))}
       </div>
 
-      <div className="relative mx-auto max-w-4xl">
+      <div className="relative mx-auto max-w-6xl">
         {/* Header row */}
         <header className="mb-6 flex flex-col gap-4 md:mb-8 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary shadow-sm backdrop-blur">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
-              Study Tracker
+              Study Planner
             </div>
             <h1 className="text-3xl font-bold leading-tight text-foreground md:text-4xl">
-              Your study log
+              Sakura Bloom
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Organize lessons by subject, status, and anything you want to track.
+              Plan your days, track every lesson, and watch each subject bloom into progress. 🌸
             </p>
+            <div className="mt-3">
+              <Link
+                to="/progress"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
+              >
+                📊 View progress page
+              </Link>
+            </div>
           </div>
 
           <div className="flex flex-col items-start gap-3 md:items-end">
-            <ClockWidget />
+            <div className="flex flex-wrap gap-2">
+              <ClockWidget />
+              <StudyTimer />
+            </div>
             <div className="flex flex-wrap gap-2">
               <SummaryChip label="Total" value={counts.all} tone="neutral" />
               <SummaryChip label="In progress" value={counts.progress} tone="progress" />
@@ -223,7 +199,6 @@ function Index() {
             </div>
           </div>
         </header>
-
 
         {/* Mobile / tablet sticker strip */}
         <div className="mb-6 flex justify-center gap-2 overflow-x-auto pb-1 xl:hidden">
@@ -239,186 +214,291 @@ function Index() {
           ))}
         </div>
 
-        {/* Tracker card */}
-        <section className="rounded-2xl border border-[color:var(--border)] bg-white/90 shadow-[var(--shadow-cute)] backdrop-blur">
-          {/* Toolbar: filters + actions on one row */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--border)] px-4 py-3 md:px-5">
-            <div className="flex flex-wrap gap-1.5">
-              {(["all", "todo", "progress", "done"] as const).map((k) => {
-                const active = filter === k;
-                const label = k === "all" ? "All" : STATUS_META[k].label;
-                return (
-                  <button
-                    key={k}
-                    onClick={() => setFilter(k)}
-                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      active
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-transparent bg-[color:var(--muted)] text-foreground hover:bg-[color:var(--accent)]"
-                    }`}
-                  >
-                    {label}
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] ${active ? "bg-white/25" : "bg-white/60 text-muted-foreground"}`}>
-                      {counts[k]}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={addColumn}
-                className="rounded-lg border border-dashed border-[color:var(--border)] bg-white px-3 py-1.5 text-xs font-semibold text-foreground hover:border-primary hover:text-primary"
-              >
-                + Column
-              </button>
-              <button
-                onClick={addRow}
-                className="rounded-lg bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-cute)] hover:opacity-90"
-              >
-                + New lesson
-              </button>
-            </div>
-          </div>
-
-          {/* Desktop table */}
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full border-collapse text-left text-sm" style={{ tableLayout: "fixed" }}>
-              <colgroup>
-                {columns.map((c, i) => {
-                  const isFirst = i === 0;
-                  const isDescription = c.id === "description" || i === columns.length - 1;
-                  return <col key={c.id} style={{ width: isFirst ? "18%" : isDescription ? "auto" : "22%" }} />;
-                })}
-                <col style={{ width: "150px" }} />
-                <col style={{ width: "44px" }} />
-              </colgroup>
-              <thead>
-                <tr className="border-b border-[color:var(--border)] bg-[color:var(--muted)]/60 text-[11px] uppercase tracking-wider text-muted-foreground">
-                  {columns.map((c) => (
-                    <th key={c.id} className="group px-4 py-3 font-semibold">
-                      <span className="mr-1.5">{c.emoji}</span>
-                      <button className="hover:text-primary" onClick={() => renameColumn(c.id)}>
-                        {c.label}
-                      </button>
-                      {columns.length > 1 && (
-                        <button
-                          onClick={() => deleteColumn(c.id)}
-                          className="ml-1.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
-                          title="Delete column"
-                          aria-label={`Delete column ${c.label}`}
-                        >
-                          ×
-                        </button>
-                      )}
-                    </th>
-                  ))}
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-2 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleRows.map((row, idx) => (
-                  <tr
-                    key={row.id}
-                    className={`group border-b border-[color:var(--border)] transition-colors ${
-                      idx % 2 === 1 ? "bg-[color:var(--muted)]/30" : "bg-transparent"
-                    } hover:bg-[color:var(--accent)]/40`}
-                  >
-                    {columns.map((c, ci) => (
-                      <td key={c.id} className={`relative px-2 py-1.5 align-top ${ci === 0 ? "pl-4" : ""}`}>
-                        {ci === 0 && (
-                          <span className="pointer-events-none absolute left-0 top-1.5 h-[calc(100%-12px)] w-[3px] rounded-r bg-primary opacity-0 transition-opacity group-hover:opacity-100" />
-                        )}
-                        <input
-                          value={row.values[c.id] ?? ""}
-                          onChange={(e) => updateCell(row.id, c.id, e.target.value)}
-                          placeholder={`Add ${c.label.toLowerCase()}…`}
-                          className="w-full rounded-md border border-transparent bg-transparent px-2 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
-                        />
-                      </td>
-                    ))}
-                    <td className="px-4 py-2 align-top">
-                      <button
-                        onClick={() => cycleStatus(row.id)}
-                        className={`inline-flex w-full items-center justify-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${STATUS_META[row.status].className}`}
-                      >
-                        <span className="text-sm leading-none">{STATUS_META[row.status].icon}</span>
-                        {STATUS_META[row.status].label}
-                      </button>
-                    </td>
-                    <td className="px-2 py-2 align-top">
-                      <button
-                        onClick={() => deleteRow(row.id)}
-                        className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-                        aria-label="Delete row"
-                      >
-                        ×
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {visibleRows.length === 0 && (
-                  <tr>
-                    <td colSpan={columns.length + 2} className="px-4 py-12 text-center text-sm text-muted-foreground">
-                      No lessons here yet — add one to start your study log.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile cards */}
-          <div className="grid gap-3 p-3 md:hidden">
-            {visibleRows.map((row) => {
-              const subject = row.values[columns[0]?.id] || "Untitled";
-              return (
-                <article key={row.id} className="rounded-xl border border-[color:var(--border)] bg-white p-3.5 shadow-sm">
-                  <div className="mb-2.5 flex items-center justify-between gap-2">
-                    <h3 className="truncate text-sm font-semibold text-foreground">{subject}</h3>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => cycleStatus(row.id)}
-                        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${STATUS_META[row.status].className}`}
-                      >
-                        <span>{STATUS_META[row.status].icon}</span>
-                        {STATUS_META[row.status].label}
-                      </button>
-                      <button
-                        onClick={() => deleteRow(row.id)}
-                        className="rounded-md p-1 text-muted-foreground hover:text-destructive"
-                        aria-label="Delete"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    {columns.map((c, i) => (
-                      <label key={c.id} className="block">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          {c.emoji} {c.label}
-                        </span>
-                        <input
-                          value={row.values[c.id] ?? ""}
-                          onChange={(e) => updateCell(row.id, c.id, e.target.value)}
-                          placeholder={i === 0 ? "Subject name" : `Add ${c.label.toLowerCase()}…`}
-                          className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/25"
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </article>
-              );
-            })}
-            {visibleRows.length === 0 && (
-              <div className="rounded-xl border border-dashed border-[color:var(--border)] p-8 text-center text-sm text-muted-foreground">
-                No lessons here yet — add one to start your study log.
+        <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
+          {/* Desktop left sidebar — subject donuts */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-6 space-y-4 rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 shadow-[var(--shadow-cute)] backdrop-blur">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold text-foreground">Subjects</h2>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Overall {overallPct}%
+                </span>
               </div>
-            )}
+              <div className="flex justify-center border-b border-[color:var(--border)] pb-4">
+                <Donut pct={overallPct} size={104} stroke={10} label="All lessons" sublabel={`${counts.done}/${counts.all} done`} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {stats.length === 0 && (
+                  <p className="col-span-2 text-center text-xs text-muted-foreground">Add lessons to see progress here.</p>
+                )}
+                {stats.map((s) => (
+                  <Donut
+                    key={s.subject}
+                    pct={s.pct}
+                    size={64}
+                    stroke={7}
+                    label={s.subject}
+                    sublabel={`${s.done}/${s.total}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </aside>
+
+          <div className="space-y-6">
+            {/* Tracker card */}
+            <section className="rounded-2xl border border-[color:var(--border)] bg-white/90 shadow-[var(--shadow-cute)] backdrop-blur">
+              {/* Toolbar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--border)] px-4 py-3 md:px-5">
+                <div className="flex flex-wrap gap-1.5">
+                  {(["all", "todo", "progress", "done"] as const).map((k) => {
+                    const active = filter === k;
+                    const label = k === "all" ? "All" : STATUS_META[k].label;
+                    return (
+                      <button
+                        key={k}
+                        onClick={() => setFilter(k)}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          active
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-transparent bg-[color:var(--muted)] text-foreground hover:bg-[color:var(--accent)]"
+                        }`}
+                      >
+                        {label}
+                        <span className={`rounded px-1.5 py-0.5 text-[10px] ${active ? "bg-white/25" : "bg-white/60 text-muted-foreground"}`}>
+                          {counts[k]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={addColumn}
+                    className="rounded-lg border border-dashed border-[color:var(--border)] bg-white px-3 py-1.5 text-xs font-semibold text-foreground hover:border-primary hover:text-primary"
+                  >
+                    + Column
+                  </button>
+                  <button
+                    onClick={addRow}
+                    className="rounded-lg bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-cute)] hover:opacity-90"
+                  >
+                    + New lesson
+                  </button>
+                </div>
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full border-collapse text-left text-sm" style={{ tableLayout: "fixed" }}>
+                  <colgroup>
+                    {columns.map((c, i) => {
+                      const isFirst = i === 0;
+                      const isDescription = c.id === "description" || i === columns.length - 1;
+                      return <col key={c.id} style={{ width: isFirst ? "16%" : isDescription ? "auto" : "20%" }} />;
+                    })}
+                    <col style={{ width: "130px" }} />
+                    <col style={{ width: "140px" }} />
+                    <col style={{ width: "44px" }} />
+                  </colgroup>
+                  <thead>
+                    <tr className="border-b border-[color:var(--border)] bg-[color:var(--muted)]/60 text-[11px] uppercase tracking-wider text-muted-foreground">
+                      {columns.map((c) => (
+                        <th key={c.id} className="group px-4 py-3 font-semibold">
+                          <span className="mr-1.5">{c.emoji}</span>
+                          <button className="hover:text-primary" onClick={() => renameColumn(c.id)}>
+                            {c.label}
+                          </button>
+                          {columns.length > 1 && (
+                            <button
+                              onClick={() => deleteColumn(c.id)}
+                              className="ml-1.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                              title="Delete column"
+                              aria-label={`Delete column ${c.label}`}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </th>
+                      ))}
+                      <th className="px-4 py-3 font-semibold">📅 Date</th>
+                      <th className="px-4 py-3 font-semibold">Status</th>
+                      <th className="px-2 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleRows.map((row, idx) => (
+                      <tr
+                        key={row.id}
+                        className={`group border-b border-[color:var(--border)] transition-colors ${
+                          idx % 2 === 1 ? "bg-[color:var(--muted)]/30" : "bg-transparent"
+                        } hover:bg-[color:var(--accent)]/40`}
+                      >
+                        {columns.map((c, ci) => (
+                          <td key={c.id} className={`relative px-2 py-1.5 align-top ${ci === 0 ? "pl-4" : ""}`}>
+                            {ci === 0 && (
+                              <span className="pointer-events-none absolute left-0 top-1.5 h-[calc(100%-12px)] w-[3px] rounded-r bg-primary opacity-0 transition-opacity group-hover:opacity-100" />
+                            )}
+                            <input
+                              value={row.values[c.id] ?? ""}
+                              onChange={(e) => updateCell(row.id, c.id, e.target.value)}
+                              placeholder={`Add ${c.label.toLowerCase()}…`}
+                              className="w-full rounded-md border border-transparent bg-transparent px-2 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
+                            />
+                          </td>
+                        ))}
+                        <td className="px-2 py-2 align-top">
+                          <input
+                            type="date"
+                            value={row.date ?? ""}
+                            onChange={(e) => updateDate(row.id, e.target.value || null)}
+                            className="w-full rounded-md border border-transparent bg-transparent px-2 py-2 text-xs text-foreground outline-none focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
+                          />
+                        </td>
+                        <td className="px-4 py-2 align-top">
+                          <button
+                            onClick={() => cycleStatus(row.id)}
+                            className={`inline-flex w-full items-center justify-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${STATUS_META[row.status].className}`}
+                          >
+                            <span className="text-sm leading-none">{STATUS_META[row.status].icon}</span>
+                            {STATUS_META[row.status].label}
+                          </button>
+                        </td>
+                        <td className="px-2 py-2 align-top">
+                          <button
+                            onClick={() => deleteRow(row.id)}
+                            className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                            aria-label="Delete row"
+                          >
+                            ×
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {visibleRows.length === 0 && (
+                      <tr>
+                        <td colSpan={columns.length + 3} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                          No lessons here yet — add one to start your study log.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="grid gap-3 p-3 md:hidden">
+                {visibleRows.map((row) => {
+                  const subject = row.values[columns[0]?.id] || "Untitled";
+                  return (
+                    <article key={row.id} className="rounded-xl border border-[color:var(--border)] bg-white p-3.5 shadow-sm">
+                      <div className="mb-2.5 flex items-center justify-between gap-2">
+                        <h3 className="truncate text-sm font-semibold text-foreground">{subject}</h3>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => cycleStatus(row.id)}
+                            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${STATUS_META[row.status].className}`}
+                          >
+                            <span>{STATUS_META[row.status].icon}</span>
+                            {STATUS_META[row.status].label}
+                          </button>
+                          <button
+                            onClick={() => deleteRow(row.id)}
+                            className="rounded-md p-1 text-muted-foreground hover:text-destructive"
+                            aria-label="Delete"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {columns.map((c, i) => (
+                          <label key={c.id} className="block">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              {c.emoji} {c.label}
+                            </span>
+                            <input
+                              value={row.values[c.id] ?? ""}
+                              onChange={(e) => updateCell(row.id, c.id, e.target.value)}
+                              placeholder={i === 0 ? "Subject name" : `Add ${c.label.toLowerCase()}…`}
+                              className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/25"
+                            />
+                          </label>
+                        ))}
+                        <label className="block">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📅 Date</span>
+                          <input
+                            type="date"
+                            value={row.date ?? ""}
+                            onChange={(e) => updateDate(row.id, e.target.value || null)}
+                            className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                          />
+                        </label>
+                      </div>
+                    </article>
+                  );
+                })}
+                {visibleRows.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-[color:var(--border)] p-8 text-center text-sm text-muted-foreground">
+                    No lessons here yet — add one to start your study log.
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Calendar planner */}
+            <section className="rounded-2xl border border-[color:var(--border)] bg-white/90 shadow-[var(--shadow-cute)] backdrop-blur">
+              <div className="border-b border-[color:var(--border)] px-4 py-3 md:px-5">
+                <h2 className="text-sm font-bold text-foreground">📅 Plan your days</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">Dots mark days that already have lessons. Pick a day to see or plan for it.</p>
+              </div>
+              <div className="grid gap-4 p-4 md:grid-cols-[auto_1fr] md:p-5">
+                <Calendar
+                  mode="single"
+                  selected={selectedDay}
+                  onSelect={setSelectedDay}
+                  modifiers={{ planned: plannedDays }}
+                  modifiersClassNames={{
+                    planned: "relative font-semibold text-primary after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-primary",
+                  }}
+                  className="pointer-events-auto rounded-xl border border-[color:var(--border)] bg-white p-2"
+                />
+                <div className="min-w-0">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      {selectedDay ? selectedDay.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : "Pick a day"}
+                    </h3>
+                    <span className="text-[11px] font-semibold text-muted-foreground">{dayRows.length} lesson{dayRows.length === 1 ? "" : "s"}</span>
+                  </div>
+                  {dayRows.length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-[color:var(--border)] px-3 py-6 text-center text-xs text-muted-foreground">
+                      Nothing planned yet. Add a lesson above and assign this date, or plan ahead here.
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {dayRows.map((r: Row) => {
+                        const s = STATUS_META[r.status];
+                        const subject = r.values[columns[0]?.id] || "Untitled";
+                        const lesson = r.values[columns[1]?.id] || "";
+                        return (
+                          <li key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-[color:var(--border)] bg-white px-3 py-2">
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-semibold text-foreground">{subject}</div>
+                              {lesson && <div className="truncate text-xs text-muted-foreground">{lesson}</div>}
+                            </div>
+                            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${s.className}`}>
+                              <span>{s.icon}</span>{s.label}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </section>
           </div>
-        </section>
+        </div>
 
         <footer className="mt-6 text-center text-xs text-muted-foreground">
           Tap the status pill to cycle · Click a column header to rename it · Everything saves to your browser
@@ -443,35 +523,5 @@ function SummaryChip({ label, value, tone }: { label: string; value: number; ton
   );
 }
 
-function ClockWidget() {
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    setNow(new Date());
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const time = now
-    ? now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-    : "--:--:--";
-  const date = now
-    ? now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })
-    : "";
-
-  return (
-    <div className="inline-flex items-center gap-3 rounded-2xl border border-[color:var(--border)] bg-white/85 px-4 py-2.5 shadow-[var(--shadow-cute)] backdrop-blur">
-      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-lg">
-        ⏰
-      </div>
-      <div className="flex flex-col leading-tight">
-        <span className="font-mono text-lg font-bold tabular-nums text-foreground tracking-tight">
-          {time}
-        </span>
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          {date}
-        </span>
-      </div>
-    </div>
-  );
-}
-
+// avoid unused import warning if DEFAULT_COLUMNS ever tree-shakes oddly
+void DEFAULT_COLUMNS;
