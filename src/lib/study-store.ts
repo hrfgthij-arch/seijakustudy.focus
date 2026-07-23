@@ -8,11 +8,35 @@ export type Column = {
   emoji: string;
 };
 
+export type Priority = {
+  id: string;
+  label: string;
+  color: string; // oklch or hex
+};
+
 export type Row = {
   id: string;
   values: Record<string, string>;
   status: Status;
   date: string | null; // ISO yyyy-mm-dd
+  time: string | null; // HH:MM
+  priorityId: string | null;
+};
+
+export type SleepEntry = {
+  id: string;
+  date: string; // ISO yyyy-mm-dd
+  hours: number;
+  note: string;
+};
+
+export type Settings = {
+  bannerImage: string | null;
+  pdfUrl: string | null;
+  pdfName: string | null;
+  timerSize: { w: number; h: number };
+  showSleep: boolean;
+  showPdf: boolean;
 };
 
 export const DEFAULT_COLUMNS: Column[] = [
@@ -20,6 +44,22 @@ export const DEFAULT_COLUMNS: Column[] = [
   { id: "lesson", label: "Lesson", emoji: "✏️" },
   { id: "description", label: "Description", emoji: "📝" },
 ];
+
+export const DEFAULT_PRIORITIES: Priority[] = [
+  { id: "urgent", label: "Urgent", color: "oklch(0.62 0.2 25)" },
+  { id: "high", label: "High", color: "oklch(0.7 0.17 55)" },
+  { id: "medium", label: "Medium", color: "oklch(0.72 0.13 220)" },
+  { id: "low", label: "Low", color: "oklch(0.7 0.09 250)" },
+];
+
+export const DEFAULT_SETTINGS: Settings = {
+  bannerImage: null,
+  pdfUrl: null,
+  pdfName: null,
+  timerSize: { w: 340, h: 130 },
+  showSleep: false,
+  showPdf: false,
+};
 
 export const STATUS_META: Record<
   Status,
@@ -48,26 +88,67 @@ export const STATUS_META: Record<
   },
 };
 
-const STORAGE_KEY = "sakura-study-tracker-v2";
-const LEGACY_KEY = "sakura-study-tracker-v1";
+const STORAGE_KEY = "sakura-study-tracker-v3";
+const LEGACY_V2 = "sakura-study-tracker-v2";
+const LEGACY_V1 = "sakura-study-tracker-v1";
 
 export function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-type State = { columns: Column[]; rows: Row[] };
+type State = {
+  columns: Column[];
+  rows: Row[];
+  priorities: Priority[];
+  settings: Settings;
+  sleep: SleepEntry[];
+};
+
+function migrateRow(r: Partial<Row> & { id: string; values: Record<string, string>; status: Status }): Row {
+  return {
+    id: r.id,
+    values: r.values,
+    status: r.status,
+    date: r.date ?? null,
+    time: r.time ?? null,
+    priorityId: r.priorityId ?? null,
+  };
+}
 
 function loadState(): State | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-    const legacy = window.localStorage.getItem(LEGACY_KEY);
-    if (legacy) {
-      const parsed = JSON.parse(legacy) as { columns: Column[]; rows: Omit<Row, "date">[] };
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<State>;
       return {
         columns: parsed.columns ?? DEFAULT_COLUMNS,
-        rows: (parsed.rows ?? []).map((r) => ({ ...r, date: null })),
+        rows: (parsed.rows ?? []).map(migrateRow),
+        priorities: parsed.priorities ?? DEFAULT_PRIORITIES,
+        settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) },
+        sleep: parsed.sleep ?? [],
+      };
+    }
+    const v2 = window.localStorage.getItem(LEGACY_V2);
+    if (v2) {
+      const parsed = JSON.parse(v2) as { columns: Column[]; rows: Row[] };
+      return {
+        columns: parsed.columns ?? DEFAULT_COLUMNS,
+        rows: (parsed.rows ?? []).map(migrateRow),
+        priorities: DEFAULT_PRIORITIES,
+        settings: DEFAULT_SETTINGS,
+        sleep: [],
+      };
+    }
+    const v1 = window.localStorage.getItem(LEGACY_V1);
+    if (v1) {
+      const parsed = JSON.parse(v1) as { columns: Column[]; rows: Omit<Row, "date" | "time" | "priorityId">[] };
+      return {
+        columns: parsed.columns ?? DEFAULT_COLUMNS,
+        rows: (parsed.rows ?? []).map((r) => migrateRow(r as unknown as Row)),
+        priorities: DEFAULT_PRIORITIES,
+        settings: DEFAULT_SETTINGS,
+        sleep: [],
       };
     }
     return null;
@@ -77,14 +158,17 @@ function loadState(): State | null {
 }
 
 const seedRows = (): Row[] => [
-  { id: uid(), values: { subject: "Math", lesson: "Integrals", description: "Practice u-substitution" }, status: "progress", date: null },
-  { id: uid(), values: { subject: "Japanese", lesson: "N5 Kanji", description: "Review chapter 3" }, status: "todo", date: null },
-  { id: uid(), values: { subject: "History", lesson: "Edo Period", description: "Notes + timeline" }, status: "done", date: null },
+  { id: uid(), values: { subject: "Math", lesson: "Integrals", description: "Practice u-substitution" }, status: "progress", date: null, time: null, priorityId: "high" },
+  { id: uid(), values: { subject: "Japanese", lesson: "N5 Kanji", description: "Review chapter 3" }, status: "todo", date: null, time: null, priorityId: "medium" },
+  { id: uid(), values: { subject: "History", lesson: "Edo Period", description: "Notes + timeline" }, status: "done", date: null, time: null, priorityId: "low" },
 ];
 
 export function useStudyStore() {
   const [columns, setColumns] = useState<Column[]>(DEFAULT_COLUMNS);
   const [rows, setRows] = useState<Row[]>([]);
+  const [priorities, setPriorities] = useState<Priority[]>(DEFAULT_PRIORITIES);
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [sleep, setSleep] = useState<SleepEntry[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -92,32 +176,31 @@ export function useStudyStore() {
     if (saved && saved.columns?.length) {
       setColumns(saved.columns);
       setRows(saved.rows ?? []);
+      setPriorities(saved.priorities ?? DEFAULT_PRIORITIES);
+      setSettings({ ...DEFAULT_SETTINGS, ...saved.settings });
+      setSleep(saved.sleep ?? []);
     } else {
       setRows(seedRows());
     }
     setHydrated(true);
-
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue) as State;
-          setColumns(parsed.columns);
-          setRows(parsed.rows);
-        } catch {
-          /* ignore */
-        }
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ columns, rows }));
-  }, [columns, rows, hydrated]);
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ columns, rows, priorities, settings, sleep })
+    );
+  }, [columns, rows, priorities, settings, sleep, hydrated]);
 
-  return { columns, setColumns, rows, setRows, hydrated };
+  return {
+    columns, setColumns,
+    rows, setRows,
+    priorities, setPriorities,
+    settings, setSettings,
+    sleep, setSleep,
+    hydrated,
+  };
 }
 
 export function subjectStats(rows: Row[], subjectColId = "subject") {

@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Donut } from "@/components/Donut";
-import { STATUS_META, subjectStats, useStudyStore, type Row } from "@/lib/study-store";
+import { STATUS_META, subjectStats, useStudyStore, type Row, type Priority } from "@/lib/study-store";
 
 export const Route = createFileRoute("/progress")({
   head: () => ({
@@ -24,13 +24,19 @@ function toISO(d: Date) {
 }
 
 function ProgressPage() {
-  const { rows, columns } = useStudyStore();
+  const { rows, columns, priorities } = useStudyStore();
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
 
   const stats = useMemo(() => subjectStats(rows), [rows]);
   const total = rows.length;
   const done = rows.filter((r) => r.status === "done").length;
   const overallPct = total ? Math.round((done / total) * 100) : 0;
+
+  const priorityMap = useMemo(() => {
+    const m = new Map<string, Priority>();
+    priorities.forEach((p) => m.set(p.id, p));
+    return m;
+  }, [priorities]);
 
   const plannedDays = useMemo(() => {
     const set = new Set<string>();
@@ -44,7 +50,9 @@ function ProgressPage() {
   const dayRows = useMemo(() => {
     if (!selectedDay) return [];
     const iso = toISO(selectedDay);
-    return rows.filter((r) => r.date === iso);
+    return rows
+      .filter((r) => r.date === iso)
+      .sort((a, b) => (a.time ?? "99").localeCompare(b.time ?? "99"));
   }, [rows, selectedDay]);
 
   return (
@@ -124,16 +132,34 @@ function ProgressPage() {
                     const s = STATUS_META[r.status];
                     const subject = r.values[columns[0]?.id] || "Untitled";
                     const lesson = r.values[columns[1]?.id] || "";
+                    const p = r.priorityId ? priorityMap.get(r.priorityId) : null;
                     return (
                       <li key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-[color:var(--border)] bg-white px-3 py-2">
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-semibold text-foreground">{subject}</div>
-                          {lesson && <div className="truncate text-xs text-muted-foreground">{lesson}</div>}
+                        <div className="flex min-w-0 items-center gap-2">
+                          {r.time && (
+                            <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums text-primary">
+                              {r.time}
+                            </span>
+                          )}
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold text-foreground">{subject}</div>
+                            {lesson && <div className="truncate text-xs text-muted-foreground">{lesson}</div>}
+                          </div>
                         </div>
-                        <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${s.className}`}>
-                          <span>{s.icon}</span>
-                          {s.label}
-                        </span>
+                        <div className="flex flex-shrink-0 items-center gap-1.5">
+                          {p && (
+                            <span
+                              className="rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                              style={{ borderColor: p.color, color: p.color, backgroundColor: `color-mix(in oklch, ${p.color} 12%, white)` }}
+                            >
+                              {p.label}
+                            </span>
+                          )}
+                          <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${s.className}`}>
+                            <span>{s.icon}</span>
+                            {s.label}
+                          </span>
+                        </div>
                       </li>
                     );
                   })}

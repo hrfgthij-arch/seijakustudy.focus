@@ -10,13 +10,18 @@ import stickerNavia from "@/assets/sticker-navia.png";
 import { Calendar } from "@/components/ui/calendar";
 import { Donut } from "@/components/Donut";
 import { ClockWidget, StudyTimer } from "@/components/StudyTimer";
+import { ResizableBox } from "@/components/ResizableBox";
+import { BannerUploader } from "@/components/BannerUploader";
+import { PdfWidget } from "@/components/PdfWidget";
+import { PriorityManager } from "@/components/PriorityManager";
+import { SleepTracker } from "@/components/SleepTracker";
 import {
-  DEFAULT_COLUMNS,
   STATUS_META,
   subjectStats,
   uid,
   useStudyStore,
   type Column,
+  type Priority,
   type Row,
   type Status,
 } from "@/lib/study-store";
@@ -33,20 +38,18 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-// Stickers pinned to page margins, evenly distributed on left and right sides.
 const STICKERS = [
-  // Left column — 4 stickers evenly spaced
   { src: stickerKurisu, style: { top: "8%", left: "1.5%" }, size: 118, r: "-9deg", delay: "0s" },
   { src: stickerSkirk, style: { top: "32%", left: "1%" }, size: 114, r: "5deg", delay: "0.6s" },
   { src: stickerMahiru, style: { top: "56%", left: "1.5%" }, size: 112, r: "-4deg", delay: "1.1s" },
   { src: stickerSandrone, style: { top: "80%", left: "2%" }, size: 110, r: "-10deg", delay: "1.5s" },
-  // Right column — 3 stickers evenly spaced
   { src: stickerViolet, style: { top: "14%", right: "1.5%" }, size: 118, r: "8deg", delay: "0.3s" },
   { src: stickerNavia, style: { top: "46%", right: "1%" }, size: 114, r: "-6deg", delay: "0.9s" },
   { src: stickerKaori, style: { top: "78%", right: "1.5%" }, size: 112, r: "7deg", delay: "1.3s" },
 ];
 
-const MOBILE_STRIP = [stickerKurisu, stickerViolet, stickerMahiru, stickerKaori, stickerSkirk, stickerNavia, stickerSandrone];
+// Mobile: fewer stickers, larger box, object-contain so nothing is cropped.
+const MOBILE_STRIP = [stickerKurisu, stickerViolet, stickerMahiru, stickerNavia];
 
 function toISO(d: Date) {
   const y = d.getFullYear();
@@ -56,9 +59,18 @@ function toISO(d: Date) {
 }
 
 function Index() {
-  const { columns, setColumns, rows, setRows } = useStudyStore();
+  const {
+    columns, setColumns,
+    rows, setRows,
+    priorities, setPriorities,
+    settings, setSettings,
+    sleep, setSleep,
+  } = useStudyStore();
+
   const [filter, setFilter] = useState<"all" | Status>("all");
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
+  const [showBanner, setShowBanner] = useState(false);
+  const [showPriorityMgr, setShowPriorityMgr] = useState(false);
 
   const visibleRows = useMemo(
     () => (filter === "all" ? rows : rows.filter((r) => r.status === filter)),
@@ -90,25 +102,44 @@ function Index() {
     return rows.filter((r) => r.date === iso);
   }, [rows, selectedDay]);
 
+  const priorityMap = useMemo(() => {
+    const m = new Map<string, Priority>();
+    priorities.forEach((p) => m.set(p.id, p));
+    return m;
+  }, [priorities]);
+
   function addRow() {
     const values: Record<string, string> = {};
     columns.forEach((c) => (values[c.id] = ""));
-    setRows((r) => [...r, { id: uid(), values, status: "todo", date: selectedDay ? toISO(selectedDay) : null }]);
+    setRows((r) => [
+      ...r,
+      {
+        id: uid(),
+        values,
+        status: "todo",
+        date: selectedDay ? toISO(selectedDay) : null,
+        time: null,
+        priorityId: null,
+      },
+    ]);
   }
 
   function updateCell(rowId: string, colId: string, v: string) {
     setRows((r) => r.map((row) => (row.id === rowId ? { ...row, values: { ...row.values, [colId]: v } } : row)));
   }
-
   function updateDate(rowId: string, iso: string | null) {
     setRows((r) => r.map((row) => (row.id === rowId ? { ...row, date: iso } : row)));
   }
-
+  function updateTime(rowId: string, t: string | null) {
+    setRows((r) => r.map((row) => (row.id === rowId ? { ...row, time: t } : row)));
+  }
+  function updatePriority(rowId: string, pid: string | null) {
+    setRows((r) => r.map((row) => (row.id === rowId ? { ...row, priorityId: pid } : row)));
+  }
   function cycleStatus(rowId: string) {
     const order: Status[] = ["todo", "progress", "done"];
     setRows((r) => r.map((row) => (row.id === rowId ? { ...row, status: order[(order.indexOf(row.status) + 1) % order.length] } : row)));
   }
-
   function deleteRow(rowId: string) {
     setRows((r) => r.filter((row) => row.id !== rowId));
   }
@@ -121,7 +152,6 @@ function Index() {
     setColumns((c: Column[]) => [...c, { id, label, emoji }]);
     setRows((rs) => rs.map((r) => ({ ...r, values: { ...r.values, [id]: "" } })));
   }
-
   function renameColumn(colId: string) {
     const col = columns.find((c) => c.id === colId);
     if (!col) return;
@@ -129,7 +159,6 @@ function Index() {
     if (!label) return;
     setColumns((c: Column[]) => c.map((x) => (x.id === colId ? { ...x, label } : x)));
   }
-
   function deleteColumn(colId: string) {
     if (columns.length <= 1) return;
     if (!window.confirm("Delete this column?")) return;
@@ -143,14 +172,13 @@ function Index() {
 
   return (
     <main className="relative min-h-screen overflow-hidden px-4 py-8 md:px-10 md:py-14">
-      {/* Floating stickers — desktop only, pinned to page margins */}
       <div aria-hidden className="pointer-events-none absolute inset-0 hidden xl:block">
         {STICKERS.map((s, i) => (
           <img
             key={i}
             src={s.src}
             alt=""
-            className="absolute animate-float drop-shadow-[0_12px_22px_oklch(0.55_0.16_255/0.25)]"
+            className="absolute animate-float object-contain drop-shadow-[0_12px_22px_oklch(0.55_0.16_255/0.25)]"
             style={{
               ...s.style,
               width: s.size,
@@ -164,7 +192,13 @@ function Index() {
       </div>
 
       <div className="relative mx-auto max-w-6xl">
-        {/* Header row */}
+        {/* Optional banner */}
+        {settings.bannerImage && (
+          <div className="mb-6 overflow-hidden rounded-2xl border border-[color:var(--border)] shadow-[var(--shadow-cute)]">
+            <img src={settings.bannerImage} alt="" className="max-h-56 w-full object-cover" />
+          </div>
+        )}
+
         <header className="mb-6 flex flex-col gap-4 md:mb-8 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary shadow-sm backdrop-blur">
@@ -177,20 +211,50 @@ function Index() {
             <p className="mt-1 text-sm text-muted-foreground">
               Plan your days, track every lesson, and watch each subject bloom into progress. 🌸
             </p>
-            <div className="mt-3">
+            <div className="mt-3 flex flex-wrap gap-2">
               <Link
                 to="/progress"
                 className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
               >
                 📊 View progress page
               </Link>
+              <button
+                onClick={() => setShowBanner((v) => !v)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
+              >
+                🖼️ Banner
+              </button>
+              <button
+                onClick={() => setSettings({ ...settings, showPdf: !settings.showPdf })}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
+              >
+                📎 {settings.showPdf ? "Hide" : "Embed"} PDF
+              </button>
+              <button
+                onClick={() => setSettings({ ...settings, showSleep: !settings.showSleep })}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
+              >
+                🌙 {settings.showSleep ? "Hide" : "Add"} sleep tracker
+              </button>
+              <button
+                onClick={() => setShowPriorityMgr((v) => !v)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
+              >
+                ⚡ Priorities
+              </button>
             </div>
           </div>
 
           <div className="flex flex-col items-start gap-3 md:items-end">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-start gap-2">
               <ClockWidget />
-              <StudyTimer />
+              <ResizableBox
+                width={settings.timerSize.w}
+                height={settings.timerSize.h}
+                onResize={(w, h) => setSettings({ ...settings, timerSize: { w, h } })}
+              >
+                <StudyTimer />
+              </ResizableBox>
             </div>
             <div className="flex flex-wrap gap-2">
               <SummaryChip label="Total" value={counts.all} tone="neutral" />
@@ -200,14 +264,33 @@ function Index() {
           </div>
         </header>
 
-        {/* Mobile / tablet sticker strip */}
-        <div className="mb-6 flex justify-center gap-2 overflow-x-auto pb-1 xl:hidden">
+        {(showBanner || showPriorityMgr) && (
+          <div className="mb-6 space-y-3">
+            {showBanner && (
+              <BannerUploader
+                value={settings.bannerImage}
+                onChange={(v) => setSettings({ ...settings, bannerImage: v })}
+                onClose={() => setShowBanner(false)}
+              />
+            )}
+            {showPriorityMgr && (
+              <PriorityManager
+                priorities={priorities}
+                onChange={setPriorities}
+                onClose={() => setShowPriorityMgr(false)}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Mobile sticker strip — fewer, larger, contain */}
+        <div className="mb-6 flex justify-center gap-3 xl:hidden">
           {MOBILE_STRIP.map((s, i) => (
             <img
               key={i}
               src={s}
               alt=""
-              className="h-14 w-14 flex-shrink-0 animate-float drop-shadow-[0_6px_10px_oklch(0.55_0.16_255/0.25)]"
+              className="h-20 w-20 flex-shrink-0 animate-float object-contain drop-shadow-[0_6px_10px_oklch(0.55_0.16_255/0.25)]"
               style={{ animationDelay: `${i * 0.25}s` }}
               loading="lazy"
             />
@@ -215,7 +298,6 @@ function Index() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-          {/* Desktop left sidebar — subject donuts */}
           <aside className="hidden lg:block">
             <div className="sticky top-6 space-y-4 rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 shadow-[var(--shadow-cute)] backdrop-blur">
               <div className="flex items-center justify-between">
@@ -246,9 +328,7 @@ function Index() {
           </aside>
 
           <div className="space-y-6">
-            {/* Tracker card */}
             <section className="rounded-2xl border border-[color:var(--border)] bg-white/90 shadow-[var(--shadow-cute)] backdrop-blur">
-              {/* Toolbar */}
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--border)] px-4 py-3 md:px-5">
                 <div className="flex flex-wrap gap-1.5">
                   {(["all", "todo", "progress", "done"] as const).map((k) => {
@@ -295,9 +375,11 @@ function Index() {
                     {columns.map((c, i) => {
                       const isFirst = i === 0;
                       const isDescription = c.id === "description" || i === columns.length - 1;
-                      return <col key={c.id} style={{ width: isFirst ? "16%" : isDescription ? "auto" : "20%" }} />;
+                      return <col key={c.id} style={{ width: isFirst ? "14%" : isDescription ? "auto" : "16%" }} />;
                     })}
                     <col style={{ width: "130px" }} />
+                    <col style={{ width: "90px" }} />
+                    <col style={{ width: "120px" }} />
                     <col style={{ width: "140px" }} />
                     <col style={{ width: "44px" }} />
                   </colgroup>
@@ -322,62 +404,99 @@ function Index() {
                         </th>
                       ))}
                       <th className="px-4 py-3 font-semibold">📅 Date</th>
+                      <th className="px-2 py-3 font-semibold">🕒 Time</th>
+                      <th className="px-2 py-3 font-semibold">⚡ Priority</th>
                       <th className="px-4 py-3 font-semibold">Status</th>
                       <th className="px-2 py-3"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleRows.map((row, idx) => (
-                      <tr
-                        key={row.id}
-                        className={`group border-b border-[color:var(--border)] transition-colors ${
-                          idx % 2 === 1 ? "bg-[color:var(--muted)]/30" : "bg-transparent"
-                        } hover:bg-[color:var(--accent)]/40`}
-                      >
-                        {columns.map((c, ci) => (
-                          <td key={c.id} className={`relative px-2 py-1.5 align-top ${ci === 0 ? "pl-4" : ""}`}>
-                            {ci === 0 && (
-                              <span className="pointer-events-none absolute left-0 top-1.5 h-[calc(100%-12px)] w-[3px] rounded-r bg-primary opacity-0 transition-opacity group-hover:opacity-100" />
-                            )}
+                    {visibleRows.map((row, idx) => {
+                      const p = row.priorityId ? priorityMap.get(row.priorityId) : null;
+                      return (
+                        <tr
+                          key={row.id}
+                          className={`group border-b border-[color:var(--border)] transition-colors ${
+                            idx % 2 === 1 ? "bg-[color:var(--muted)]/30" : "bg-transparent"
+                          } hover:bg-[color:var(--accent)]/40`}
+                        >
+                          {columns.map((c, ci) => (
+                            <td key={c.id} className={`relative px-2 py-1.5 align-top ${ci === 0 ? "pl-4" : ""}`}>
+                              {ci === 0 && (
+                                <span className="pointer-events-none absolute left-0 top-1.5 h-[calc(100%-12px)] w-[3px] rounded-r bg-primary opacity-0 transition-opacity group-hover:opacity-100" />
+                              )}
+                              <input
+                                value={row.values[c.id] ?? ""}
+                                onChange={(e) => updateCell(row.id, c.id, e.target.value)}
+                                placeholder={`Add ${c.label.toLowerCase()}…`}
+                                className="w-full rounded-md border border-transparent bg-transparent px-2 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
+                              />
+                            </td>
+                          ))}
+                          <td className="px-2 py-2 align-top">
                             <input
-                              value={row.values[c.id] ?? ""}
-                              onChange={(e) => updateCell(row.id, c.id, e.target.value)}
-                              placeholder={`Add ${c.label.toLowerCase()}…`}
-                              className="w-full rounded-md border border-transparent bg-transparent px-2 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
+                              type="date"
+                              value={row.date ?? ""}
+                              onChange={(e) => updateDate(row.id, e.target.value || null)}
+                              className="w-full rounded-md border border-transparent bg-transparent px-2 py-2 text-xs text-foreground outline-none focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
                             />
                           </td>
-                        ))}
-                        <td className="px-2 py-2 align-top">
-                          <input
-                            type="date"
-                            value={row.date ?? ""}
-                            onChange={(e) => updateDate(row.id, e.target.value || null)}
-                            className="w-full rounded-md border border-transparent bg-transparent px-2 py-2 text-xs text-foreground outline-none focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
-                          />
-                        </td>
-                        <td className="px-4 py-2 align-top">
-                          <button
-                            onClick={() => cycleStatus(row.id)}
-                            className={`inline-flex w-full items-center justify-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${STATUS_META[row.status].className}`}
-                          >
-                            <span className="text-sm leading-none">{STATUS_META[row.status].icon}</span>
-                            {STATUS_META[row.status].label}
-                          </button>
-                        </td>
-                        <td className="px-2 py-2 align-top">
-                          <button
-                            onClick={() => deleteRow(row.id)}
-                            className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-                            aria-label="Delete row"
-                          >
-                            ×
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          <td className="px-2 py-2 align-top">
+                            <input
+                              type="time"
+                              value={row.time ?? ""}
+                              onChange={(e) => updateTime(row.id, e.target.value || null)}
+                              className="w-full rounded-md border border-transparent bg-transparent px-1.5 py-2 text-xs text-foreground outline-none focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
+                            />
+                          </td>
+                          <td className="px-2 py-2 align-top">
+                            <div className="relative">
+                              <select
+                                value={row.priorityId ?? ""}
+                                onChange={(e) => updatePriority(row.id, e.target.value || null)}
+                                className="w-full appearance-none rounded-full border px-2 py-1 pl-6 text-[11px] font-semibold outline-none focus:ring-2 focus:ring-primary/25"
+                                style={{
+                                  borderColor: p ? p.color : "var(--border)",
+                                  color: p ? p.color : "var(--muted-foreground)",
+                                  backgroundColor: p ? `color-mix(in oklch, ${p.color} 12%, white)` : "white",
+                                }}
+                              >
+                                <option value="">—</option>
+                                {priorities.map((pr) => (
+                                  <option key={pr.id} value={pr.id}>{pr.label}</option>
+                                ))}
+                              </select>
+                              <span
+                                aria-hidden
+                                className="pointer-events-none absolute left-2 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full"
+                                style={{ backgroundColor: p ? p.color : "oklch(0.85 0.02 250)" }}
+                              />
+                            </div>
+                          </td>
+                          <td className="px-4 py-2 align-top">
+                            <button
+                              onClick={() => cycleStatus(row.id)}
+                              className={`inline-flex w-full items-center justify-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${STATUS_META[row.status].className}`}
+                            >
+                              <span className="text-sm leading-none">{STATUS_META[row.status].icon}</span>
+                              {STATUS_META[row.status].label}
+                            </button>
+                          </td>
+                          <td className="px-2 py-2 align-top">
+                            <button
+                              onClick={() => deleteRow(row.id)}
+                              className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                              aria-label="Delete row"
+                            >
+                              ×
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {visibleRows.length === 0 && (
                       <tr>
-                        <td colSpan={columns.length + 3} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                        <td colSpan={columns.length + 5} className="px-4 py-12 text-center text-sm text-muted-foreground">
                           No lessons here yet — add one to start your study log.
                         </td>
                       </tr>
@@ -390,6 +509,7 @@ function Index() {
               <div className="grid gap-3 p-3 md:hidden">
                 {visibleRows.map((row) => {
                   const subject = row.values[columns[0]?.id] || "Untitled";
+                  const p = row.priorityId ? priorityMap.get(row.priorityId) : null;
                   return (
                     <article key={row.id} className="rounded-xl border border-[color:var(--border)] bg-white p-3.5 shadow-sm">
                       <div className="mb-2.5 flex items-center justify-between gap-2">
@@ -425,14 +545,39 @@ function Index() {
                             />
                           </label>
                         ))}
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="block">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📅 Date</span>
+                            <input
+                              type="date"
+                              value={row.date ?? ""}
+                              onChange={(e) => updateDate(row.id, e.target.value || null)}
+                              className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">🕒 Time</span>
+                            <input
+                              type="time"
+                              value={row.time ?? ""}
+                              onChange={(e) => updateTime(row.id, e.target.value || null)}
+                              className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                            />
+                          </label>
+                        </div>
                         <label className="block">
-                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📅 Date</span>
-                          <input
-                            type="date"
-                            value={row.date ?? ""}
-                            onChange={(e) => updateDate(row.id, e.target.value || null)}
-                            className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                          />
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">⚡ Priority</span>
+                          <select
+                            value={row.priorityId ?? ""}
+                            onChange={(e) => updatePriority(row.id, e.target.value || null)}
+                            className="mt-0.5 w-full rounded-md border bg-white px-2.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                            style={{ borderColor: p ? p.color : "var(--border)", color: p ? p.color : undefined }}
+                          >
+                            <option value="">—</option>
+                            {priorities.map((pr) => (
+                              <option key={pr.id} value={pr.id}>{pr.label}</option>
+                            ))}
+                          </select>
                         </label>
                       </div>
                     </article>
@@ -445,6 +590,25 @@ function Index() {
                 )}
               </div>
             </section>
+
+            {/* PDF widget (opt-in) */}
+            {settings.showPdf && (
+              <PdfWidget
+                url={settings.pdfUrl}
+                name={settings.pdfName}
+                onChange={(url, name) => setSettings({ ...settings, pdfUrl: url, pdfName: name })}
+                onClose={() => setSettings({ ...settings, showPdf: false })}
+              />
+            )}
+
+            {/* Sleep tracker (opt-in) */}
+            {settings.showSleep && (
+              <SleepTracker
+                entries={sleep}
+                onChange={setSleep}
+                onHide={() => setSettings({ ...settings, showSleep: false })}
+              />
+            )}
 
             {/* Calendar planner */}
             <section className="rounded-2xl border border-[color:var(--border)] bg-white/90 shadow-[var(--shadow-cute)] backdrop-blur">
@@ -476,19 +640,37 @@ function Index() {
                     </p>
                   ) : (
                     <ul className="space-y-2">
-                      {dayRows.map((r: Row) => {
+                      {[...dayRows].sort((a, b) => (a.time ?? "99").localeCompare(b.time ?? "99")).map((r: Row) => {
                         const s = STATUS_META[r.status];
                         const subject = r.values[columns[0]?.id] || "Untitled";
                         const lesson = r.values[columns[1]?.id] || "";
+                        const p = r.priorityId ? priorityMap.get(r.priorityId) : null;
                         return (
                           <li key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-[color:var(--border)] bg-white px-3 py-2">
-                            <div className="min-w-0">
-                              <div className="truncate text-sm font-semibold text-foreground">{subject}</div>
-                              {lesson && <div className="truncate text-xs text-muted-foreground">{lesson}</div>}
+                            <div className="flex min-w-0 items-center gap-2">
+                              {r.time && (
+                                <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums text-primary">
+                                  {r.time}
+                                </span>
+                              )}
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-semibold text-foreground">{subject}</div>
+                                {lesson && <div className="truncate text-xs text-muted-foreground">{lesson}</div>}
+                              </div>
                             </div>
-                            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${s.className}`}>
-                              <span>{s.icon}</span>{s.label}
-                            </span>
+                            <div className="flex flex-shrink-0 items-center gap-1.5">
+                              {p && (
+                                <span
+                                  className="rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                                  style={{ borderColor: p.color, color: p.color, backgroundColor: `color-mix(in oklch, ${p.color} 12%, white)` }}
+                                >
+                                  {p.label}
+                                </span>
+                              )}
+                              <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${s.className}`}>
+                                <span>{s.icon}</span>{s.label}
+                              </span>
+                            </div>
                           </li>
                         );
                       })}
@@ -501,7 +683,7 @@ function Index() {
         </div>
 
         <footer className="mt-6 text-center text-xs text-muted-foreground">
-          Tap the status pill to cycle · Click a column header to rename it · Everything saves to your browser
+          Tap the status pill to cycle · Click a column header to rename · Drag the timer's corner to resize · Everything saves to your browser
         </footer>
       </div>
     </main>
@@ -522,6 +704,3 @@ function SummaryChip({ label, value, tone }: { label: string; value: number; ton
     </div>
   );
 }
-
-// avoid unused import warning if DEFAULT_COLUMNS ever tree-shakes oddly
-void DEFAULT_COLUMNS;
