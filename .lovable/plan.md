@@ -1,58 +1,76 @@
+Plan: Study tracker upgrades
 
-## Changes
+Goal
+Add a customizable priority column, optional time field per lesson, optional banner image and PDF embed, a resizable Pomodoro timer, and fix the mobile sticker cropping.
 
-### 1. Clock + Timer widget (header)
-- Remove seconds from the clock (show `HH:MM` only, keep weekday + date).
-- Add a **Pomodoro-style countdown timer** next to the clock:
-  - Presets: 15 / 25 / 45 min + custom input.
-  - Start / Pause / Reset buttons.
-  - Beeps + toast when it hits 0.
-  - Styled to match the clock card (blue palette, same rounded/backdrop look).
+Data model changes (src/lib/study-store.ts)
 
-### 2. Sticker layout polish
-- Re-tune the 7 stickers so they are perfectly evenly spaced vertically on both sides (desktop `xl+`):
-  - Left column: 4 stickers at ~8%, 32%, 56%, 80%.
-  - Right column: 3 stickers at ~14%, 46%, 78%.
-- Nudge sizes/rotations for visual balance; keep the floating animation and mobile strip untouched.
+- Bump localStorage key to v3 with a v2 migration.
+- Add to Row: `priorityId` (string | null) and `time` (string | null, HH:MM).
+- Add app-level settings: `priorities[]` (id, label, color), `bannerImage` (string | null), `pdfUrl` (string | null), and `timerSize` (width, height).
+- Default priorities: Urgent, High, Medium, Low with distinct colors.
+- Update seed rows and migration to fill the new fields.
 
-### 3. New title & description
-- Replace "Your study log" → **"Study Sakura"** (or similar cute blue-themed name — final wording in build).
-- New description: short, cute, planner-focused (e.g. "Track lessons, plan ahead, and see your progress bloom.").
-- Update `__root.tsx` head + index route head metadata to match.
+New components
 
-### 4. Subject progress view (circular chart)
-Compute per-subject completion: `% = done rows / total rows` grouped by the first column value (Subject).
+- ResizableBox: custom mouse-driven resize wrapper with min/max constraints and a corner handle.
+- BannerUploader: file/url input to set or remove the header banner image.
+- PdfWidget: file/url input plus an iframe viewer; only renders when the user enables it.
+- PriorityManager: inline UI to add, rename, remove, and recolor priority levels.
+- PriorityPill: dropdown/select for a row's priority.
+- SleepTracker: tracks the sleep only if needed by user.
 
-- **Desktop (`lg+`)**: Add a **left sidebar column** inside the main container showing each subject as a small SVG donut chart + subject name + `x/y` count. Sticky at top on scroll.
-- **Mobile / tablet**: Add a **new route `/progress`** dedicated to the same circular charts (one per subject, grid layout), plus a link/tab in the header ("Progress").
-- Layout becomes: `[Sidebar (lg+ only)] [Tracker card]` — grid with `lg:grid-cols-[220px_1fr]`.
+Timer changes (src/components/StudyTimer.tsx)
 
-Charts are plain SVG (stroke-dasharray donut) — no chart lib needed.
+- Keep the existing 15/25/45 minute presets and completion beep.
+- Remove inline-flex wrapper so it can fill a resizable container.
+- Wrap the timer in ResizableBox in the index header and persist its size.
 
-### 5. Calendar planner
-- Add a **Calendar** section below the tracker (and available on the new `/progress` page too).
-- Each row gets an optional `date` field (ISO string). Add a "Date" column automatically (hidden from the customizable column list — treated as a system field on the row).
-- Calendar UI: month grid, click a day to see lessons planned for that day; days with lessons show a dot.
-- Uses shadcn `Calendar` (already available via components.json). Store `date` on each row alongside `values` and `status`; migrate old localStorage entries gracefully (default `date: null`).
+Header and banner (src/routes/index.tsx)
 
-### 6. Routing
-- New file `src/routes/progress.tsx` for the mobile progress page (also linkable from desktop).
-- Add nav links in `__root.tsx` header: Home · Progress.
-- Each route gets its own `head()` metadata.
+- Optional banner image above the title, hidden when none is set.
+- Keep the clock; wrap the timer in the resizable container; keep summary chips.
 
-### Files to touch
-- `src/routes/index.tsx` — clock (no seconds), timer, sticker spacing, sidebar donuts, calendar, date field, title/desc.
-- `src/routes/progress.tsx` — new page with per-subject donuts + calendar.
-- `src/routes/__root.tsx` — nav links + updated title/meta.
-- Reuse `src/components/ui/calendar.tsx` (shadcn) — add if missing.
+Toolbar (src/routes/index.tsx)
 
-### Data model change
-```ts
-type Row = {
-  id: string;
-  values: Record<string, string>;
-  status: Status;
-  date: string | null; // NEW — ISO yyyy-mm-dd
-};
-```
-Storage key bumped to `sakura-study-tracker-v2` with one-time migration from v1.
+- Add small buttons: "Manage priorities", "PDF viewer", "Banner image".
+- Use inline panels instead of modals to avoid extra dependencies.
+
+Table and cards
+
+- Add a "Time" column after "Date" and a "Priority" column before "Status".
+- Inputs: time picker and priority dropdown.
+- Treat Date, Time, and Priority as system columns, hidden from the add/remove column flow.
+- Update mobile cards to include time and priority fields.
+- Show priority label and time in the calendar day list.
+- Add a new table called sleep tracker which can be removed by user if not needed.
+
+Calendar and progress page
+
+- Display the time and priority on each lesson in the selected-day list.
+- Keep the same calendar dot behavior.
+
+Mobile stickers fix
+
+- Reduce the mobile strip to a smaller subset (4 characters) and render them with `object-contain`.
+- Use a slightly larger width/height so the full character is visible without cropping.
+
+Progress page (src/routes/progress.tsx)
+
+- Show time and priority on calendar day list items.
+
+Files to touch
+
+- src/lib/study-store.ts
+- src/components/StudyTimer.tsx
+- src/components/ResizableBox.tsx (new)
+- src/components/BannerUploader.tsx (new)
+- src/components/PdfWidget.tsx (new)
+- src/components/PriorityManager.tsx (new)
+- src/routes/index.tsx
+- src/routes/progress.tsx
+- src/routes/__root.tsx (optional global nav, if needed)
+
+Validation
+
+- Build the project and run the local preview to verify the timer resizes, PDF/banner toggles work, priority column and time inputs appear, and mobile stickers render correctly.
