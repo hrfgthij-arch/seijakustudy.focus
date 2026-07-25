@@ -1,34 +1,31 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export type Status = "todo" | "progress" | "done";
 
-export type Column = {
-  id: string;
-  label: string;
-  emoji: string;
-};
-
-export type Priority = {
-  id: string;
-  label: string;
-  color: string; // oklch or hex
-};
+export type Column = { id: string; label: string; emoji: string };
+export type Priority = { id: string; label: string; color: string };
 
 export type Row = {
   id: string;
   values: Record<string, string>;
   status: Status;
-  date: string | null; // ISO yyyy-mm-dd
-  time: string | null; // HH:MM
+  date: string | null;
+  time: string | null;
   priorityId: string | null;
 };
 
-export type SleepEntry = {
-  id: string;
-  date: string; // ISO yyyy-mm-dd
-  hours: number;
-  note: string;
-};
+export type SleepEntry = { id: string; date: string; hours: number; note: string };
+
+export type Todo = { id: string; text: string; done: boolean; createdAt: string };
+
+// Planner: slots keyed by `${weekday}|${startTime}` -> { subject, note }
+export type PlannerSlot = { id: string; weekday: number; time: string; subject: string; note: string };
+
+// Consistency: per-habit list of ISO dates ticked
+export type Habit = { id: string; label: string; dates: string[] };
+
+export type WeekStart = "sunday" | "monday";
 
 export type Settings = {
   bannerImage: string | null;
@@ -37,6 +34,7 @@ export type Settings = {
   timerSize: { w: number; h: number };
   showSleep: boolean;
   showPdf: boolean;
+  weekStart: WeekStart;
 };
 
 export const DEFAULT_COLUMNS: Column[] = [
@@ -59,55 +57,73 @@ export const DEFAULT_SETTINGS: Settings = {
   timerSize: { w: 340, h: 130 },
   showSleep: false,
   showPdf: false,
+  weekStart: "sunday",
 };
 
-export const STATUS_META: Record<
-  Status,
-  { label: string; className: string; dot: string; icon: string }
-> = {
+export const DEFAULT_HABITS: Habit[] = [
+  { id: "study", label: "Studied today", dates: [] },
+  { id: "review", label: "Reviewed notes", dates: [] },
+];
+
+export const STATUS_META: Record<Status, { label: string; className: string; dot: string; icon: string }> = {
   todo: {
     label: "Not started",
     icon: "○",
     dot: "bg-[oklch(0.7_0.03_250)]",
-    className:
-      "bg-[oklch(0.95_0.02_250)] text-[oklch(0.4_0.05_250)] border-[oklch(0.86_0.03_250)]",
+    className: "bg-[oklch(0.95_0.02_250)] text-[oklch(0.4_0.05_250)] border-[oklch(0.86_0.03_250)]",
   },
   progress: {
     label: "In progress",
     icon: "◐",
     dot: "bg-[oklch(0.72_0.13_230)]",
-    className:
-      "bg-[oklch(0.94_0.05_230)] text-[oklch(0.35_0.13_240)] border-[oklch(0.82_0.09_230)]",
+    className: "bg-[oklch(0.94_0.05_230)] text-[oklch(0.35_0.13_240)] border-[oklch(0.82_0.09_230)]",
   },
   done: {
     label: "Completed",
     icon: "✓",
     dot: "bg-[oklch(0.55_0.16_260)]",
-    className:
-      "bg-[oklch(0.93_0.06_260)] text-[oklch(0.35_0.14_265)] border-[oklch(0.78_0.11_260)]",
+    className: "bg-[oklch(0.93_0.06_260)] text-[oklch(0.35_0.14_265)] border-[oklch(0.78_0.11_260)]",
   },
 };
 
-const STORAGE_KEY = "sakura-study-tracker-v3";
+const STORAGE_KEY = "sakura-study-tracker-v4";
+const LEGACY_V3 = "sakura-study-tracker-v3";
 const LEGACY_V2 = "sakura-study-tracker-v2";
 const LEGACY_V1 = "sakura-study-tracker-v1";
+const GUEST_SNAPSHOT_KEY = "sakura-guest-snapshot";
 
 export function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-type State = {
+export type State = {
   columns: Column[];
   rows: Row[];
   priorities: Priority[];
   settings: Settings;
   sleep: SleepEntry[];
+  todos: Todo[];
+  plannerSlots: PlannerSlot[];
+  habits: Habit[];
 };
 
-function migrateRow(r: Partial<Row> & { id: string; values: Record<string, string>; status: Status }): Row {
+function emptyState(): State {
+  return {
+    columns: DEFAULT_COLUMNS,
+    rows: [],
+    priorities: DEFAULT_PRIORITIES,
+    settings: DEFAULT_SETTINGS,
+    sleep: [],
+    todos: [],
+    plannerSlots: [],
+    habits: DEFAULT_HABITS,
+  };
+}
+
+function migrateRow(r: any): Row {
   return {
     id: r.id,
-    values: r.values,
+    values: r.values ?? {},
     status: r.status,
     date: r.date ?? null,
     time: r.time ?? null,
@@ -115,46 +131,40 @@ function migrateRow(r: Partial<Row> & { id: string; values: Record<string, strin
   };
 }
 
-function loadState(): State | null {
+function normalizeState(parsed: any): State {
+  const base = emptyState();
+  return {
+    columns: parsed?.columns?.length ? parsed.columns : base.columns,
+    rows: (parsed?.rows ?? []).map(migrateRow),
+    priorities: parsed?.priorities?.length ? parsed.priorities : base.priorities,
+    settings: { ...base.settings, ...(parsed?.settings ?? {}) },
+    sleep: parsed?.sleep ?? [],
+    todos: parsed?.todos ?? [],
+    plannerSlots: parsed?.plannerSlots ?? [],
+    habits: parsed?.habits?.length ? parsed.habits : base.habits,
+  };
+}
+
+function loadLocal(): State | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<State>;
-      return {
-        columns: parsed.columns ?? DEFAULT_COLUMNS,
-        rows: (parsed.rows ?? []).map(migrateRow),
-        priorities: parsed.priorities ?? DEFAULT_PRIORITIES,
-        settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) },
-        sleep: parsed.sleep ?? [],
-      };
-    }
-    const v2 = window.localStorage.getItem(LEGACY_V2);
-    if (v2) {
-      const parsed = JSON.parse(v2) as { columns: Column[]; rows: Row[] };
-      return {
-        columns: parsed.columns ?? DEFAULT_COLUMNS,
-        rows: (parsed.rows ?? []).map(migrateRow),
-        priorities: DEFAULT_PRIORITIES,
-        settings: DEFAULT_SETTINGS,
-        sleep: [],
-      };
-    }
-    const v1 = window.localStorage.getItem(LEGACY_V1);
-    if (v1) {
-      const parsed = JSON.parse(v1) as { columns: Column[]; rows: Omit<Row, "date" | "time" | "priorityId">[] };
-      return {
-        columns: parsed.columns ?? DEFAULT_COLUMNS,
-        rows: (parsed.rows ?? []).map((r) => migrateRow(r as unknown as Row)),
-        priorities: DEFAULT_PRIORITIES,
-        settings: DEFAULT_SETTINGS,
-        sleep: [],
-      };
-    }
-    return null;
+    const raw =
+      window.localStorage.getItem(STORAGE_KEY) ||
+      window.localStorage.getItem(LEGACY_V3) ||
+      window.localStorage.getItem(LEGACY_V2) ||
+      window.localStorage.getItem(LEGACY_V1);
+    if (!raw) return null;
+    return normalizeState(JSON.parse(raw));
   } catch {
     return null;
   }
+}
+
+function saveLocal(state: State) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {}
 }
 
 const seedRows = (): Row[] => [
@@ -163,43 +173,232 @@ const seedRows = (): Row[] => [
   { id: uid(), values: { subject: "History", lesson: "Edo Period", description: "Notes + timeline" }, status: "done", date: null, time: null, priorityId: "low" },
 ];
 
-export function useStudyStore() {
-  const [columns, setColumns] = useState<Column[]>(DEFAULT_COLUMNS);
-  const [rows, setRows] = useState<Row[]>([]);
-  const [priorities, setPriorities] = useState<Priority[]>(DEFAULT_PRIORITIES);
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const [sleep, setSleep] = useState<SleepEntry[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+function hasMeaningfulData(s: State) {
+  return s.rows.length > 0 || s.todos.length > 0 || s.plannerSlots.length > 0 || s.sleep.length > 0;
+}
 
+// ---- Cloud sync ---- //
+
+async function fetchRemote(userId: string): Promise<{ data: State | null; updatedAt: string | null }> {
+  const { data, error } = await supabase
+    .from("study_state" as any)
+    .select("data, updated_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !data) return { data: null, updatedAt: null };
+  return { data: normalizeState((data as any).data), updatedAt: (data as any).updated_at };
+}
+
+async function pushRemote(userId: string, state: State) {
+  await supabase
+    .from("study_state" as any)
+    .upsert({ user_id: userId, data: state as any }, { onConflict: "user_id" });
+}
+
+// Singleton hook: multiple mounts share state via a broadcast channel of listeners
+type Listener = (s: State) => void;
+const listeners = new Set<Listener>();
+let sharedState: State | null = null;
+let hydrated = false;
+
+function setSharedState(s: State) {
+  sharedState = s;
+  listeners.forEach((l) => l(s));
+}
+
+export function useStudyStore() {
+  const [state, setLocalState] = useState<State>(() => sharedState ?? emptyState());
+  const [isHydrated, setIsHydrated] = useState(hydrated);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [guestSnapshot, setGuestSnapshot] = useState<State | null>(null);
+  const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressPush = useRef(false);
+  const currentUserRef = useRef<string | null>(null);
+
+  // Register listener
   useEffect(() => {
-    const saved = loadState();
-    if (saved && saved.columns?.length) {
-      setColumns(saved.columns);
-      setRows(saved.rows ?? []);
-      setPriorities(saved.priorities ?? DEFAULT_PRIORITIES);
-      setSettings({ ...DEFAULT_SETTINGS, ...saved.settings });
-      setSleep(saved.sleep ?? []);
-    } else {
-      setRows(seedRows());
-    }
-    setHydrated(true);
+    const l: Listener = (s) => setLocalState(s);
+    listeners.add(l);
+    return () => {
+      listeners.delete(l);
+    };
   }, []);
 
+  // Initial hydrate from local
   useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ columns, rows, priorities, settings, sleep })
-    );
-  }, [columns, rows, priorities, settings, sleep, hydrated]);
+    if (hydrated) {
+      setIsHydrated(true);
+      return;
+    }
+    const saved = loadLocal();
+    let initial: State;
+    if (saved) initial = saved;
+    else {
+      initial = emptyState();
+      initial.rows = seedRows();
+    }
+    hydrated = true;
+    setSharedState(initial);
+    setIsHydrated(true);
+
+    // Restore guest snapshot pending merge, if any
+    try {
+      const snapRaw = window.localStorage.getItem(GUEST_SNAPSHOT_KEY);
+      if (snapRaw) setGuestSnapshot(normalizeState(JSON.parse(snapRaw)));
+    } catch {}
+  }, []);
+
+  // Auth subscription — hook up cloud sync
+  useEffect(() => {
+    if (!isHydrated) return;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    async function handleUser(uid: string | null) {
+      currentUserRef.current = uid;
+      setUserId(uid);
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+      }
+      if (!uid) return;
+
+      const localSnapshot = sharedState ?? emptyState();
+      const { data: remote } = await fetchRemote(uid);
+
+      if (!remote) {
+        // First time this user syncs — push local
+        suppressPush.current = true;
+        setSharedState(localSnapshot);
+        suppressPush.current = false;
+        await pushRemote(uid, localSnapshot);
+      } else if (hasMeaningfulData(localSnapshot) && hasMeaningfulData(remote)) {
+        // Both have data — stash guest snapshot for user to decide merge
+        try {
+          window.localStorage.setItem(GUEST_SNAPSHOT_KEY, JSON.stringify(localSnapshot));
+        } catch {}
+        setGuestSnapshot(localSnapshot);
+        suppressPush.current = true;
+        setSharedState(remote);
+        suppressPush.current = false;
+      } else {
+        // Adopt whichever has data
+        const chosen = hasMeaningfulData(remote) ? remote : localSnapshot;
+        suppressPush.current = true;
+        setSharedState(chosen);
+        suppressPush.current = false;
+        if (!hasMeaningfulData(remote)) await pushRemote(uid, chosen);
+      }
+
+      // Realtime subscription
+      channel = supabase
+        .channel(`study-state-${uid}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "study_state", filter: `user_id=eq.${uid}` },
+          async () => {
+            const { data: fresh } = await fetchRemote(uid);
+            if (fresh) {
+              suppressPush.current = true;
+              setSharedState(fresh);
+              suppressPush.current = false;
+            }
+          }
+        )
+        .subscribe();
+    }
+
+    supabase.auth.getUser().then(({ data }) => handleUser(data.user?.id ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+      handleUser(session?.user?.id ?? null);
+    });
+
+    return () => {
+      sub.subscription.unsubscribe();
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [isHydrated]);
+
+  // Persist changes: local always; remote debounced when signed in
+  useEffect(() => {
+    if (!isHydrated) return;
+    saveLocal(state);
+    if (suppressPush.current) return;
+    const uid = currentUserRef.current;
+    if (!uid) return;
+    if (pushTimer.current) clearTimeout(pushTimer.current);
+    pushTimer.current = setTimeout(() => {
+      if (navigator.onLine !== false) {
+        pushRemote(uid, state).catch(() => {});
+      }
+    }, 600);
+  }, [state, isHydrated]);
+
+  // Retry push when we come back online
+  useEffect(() => {
+    function onOnline() {
+      const uid = currentUserRef.current;
+      if (uid && sharedState) pushRemote(uid, sharedState).catch(() => {});
+    }
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, []);
+
+  const update = useCallback((partial: Partial<State> | ((s: State) => Partial<State>)) => {
+    const next = { ...(sharedState ?? emptyState()) };
+    const patch = typeof partial === "function" ? partial(next) : partial;
+    Object.assign(next, patch);
+    setSharedState(next);
+  }, []);
+
+  const setter = <K extends keyof State>(key: K) => (value: State[K] | ((prev: State[K]) => State[K])) => {
+    const prev = (sharedState ?? emptyState())[key];
+    const nextVal = typeof value === "function" ? (value as (p: State[K]) => State[K])(prev) : value;
+    update({ [key]: nextVal } as Partial<State>);
+  };
+
+  const mergeGuestSnapshot = useCallback(() => {
+    if (!guestSnapshot) return;
+    const cur = sharedState ?? emptyState();
+    const rowIds = new Set(cur.rows.map((r) => r.id));
+    const todoIds = new Set(cur.todos.map((t) => t.id));
+    const slotIds = new Set(cur.plannerSlots.map((s) => s.id));
+    const sleepIds = new Set(cur.sleep.map((s) => s.id));
+    const merged: State = {
+      ...cur,
+      rows: [...cur.rows, ...guestSnapshot.rows.filter((r) => !rowIds.has(r.id))],
+      todos: [...cur.todos, ...guestSnapshot.todos.filter((t) => !todoIds.has(t.id))],
+      plannerSlots: [...cur.plannerSlots, ...guestSnapshot.plannerSlots.filter((s) => !slotIds.has(s.id))],
+      sleep: [...cur.sleep, ...guestSnapshot.sleep.filter((s) => !sleepIds.has(s.id))],
+    };
+    setSharedState(merged);
+    try {
+      window.localStorage.removeItem(GUEST_SNAPSHOT_KEY);
+    } catch {}
+    setGuestSnapshot(null);
+  }, [guestSnapshot]);
+
+  const discardGuestSnapshot = useCallback(() => {
+    try {
+      window.localStorage.removeItem(GUEST_SNAPSHOT_KEY);
+    } catch {}
+    setGuestSnapshot(null);
+  }, []);
 
   return {
-    columns, setColumns,
-    rows, setRows,
-    priorities, setPriorities,
-    settings, setSettings,
-    sleep, setSleep,
-    hydrated,
+    ...state,
+    setColumns: setter("columns"),
+    setRows: setter("rows"),
+    setPriorities: setter("priorities"),
+    setSettings: setter("settings"),
+    setSleep: setter("sleep"),
+    setTodos: setter("todos"),
+    setPlannerSlots: setter("plannerSlots"),
+    setHabits: setter("habits"),
+    hydrated: isHydrated,
+    userId,
+    guestSnapshot,
+    mergeGuestSnapshot,
+    discardGuestSnapshot,
   };
 }
 
@@ -212,6 +411,7 @@ export function subjectStats(rows: Row[], subjectColId = "subject") {
     entry[r.status] += 1;
     map.set(subj, entry);
   }
-  return Array.from(map, ([subject, s]) => ({ subject, ...s, pct: s.total ? Math.round((s.done / s.total) * 100) : 0 }))
-    .sort((a, b) => b.total - a.total);
+  return Array.from(map, ([subject, s]) => ({ subject, ...s, pct: s.total ? Math.round((s.done / s.total) * 100) : 0 })).sort(
+    (a, b) => b.total - a.total
+  );
 }

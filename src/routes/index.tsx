@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { DescriptionCell } from "@/components/DescriptionCell";
+import { TodoList } from "@/components/TodoList";
 import stickerKurisu from "@/assets/sticker-kurisu.png";
 import stickerViolet from "@/assets/sticker-violet.png";
 import stickerMahiru from "@/assets/sticker-mahiru.png";
@@ -65,17 +67,36 @@ function Index() {
     priorities, setPriorities,
     settings, setSettings,
     sleep, setSleep,
+    userId, guestSnapshot, mergeGuestSnapshot, discardGuestSnapshot,
   } = useStudyStore();
 
   const [filter, setFilter] = useState<"all" | Status>("all");
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
   const [showBanner, setShowBanner] = useState(false);
   const [showPriorityMgr, setShowPriorityMgr] = useState(false);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"none" | "subject" | "status" | "date">("none");
 
-  const visibleRows = useMemo(
-    () => (filter === "all" ? rows : rows.filter((r) => r.status === filter)),
-    [rows, filter]
-  );
+  const visibleRows = useMemo(() => {
+    let list = filter === "all" ? rows : rows.filter((r) => r.status === filter);
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter((r) =>
+        Object.values(r.values).some((v) => v?.toLowerCase().includes(q)),
+      );
+    }
+    if (sortBy !== "none") {
+      const statusOrder: Record<Status, number> = { todo: 0, progress: 1, done: 2 };
+      list = [...list].sort((a, b) => {
+        if (sortBy === "status") return statusOrder[a.status] - statusOrder[b.status];
+        if (sortBy === "date") return (a.date ?? "9999").localeCompare(b.date ?? "9999");
+        const sa = (a.values["subject"] ?? "").toLowerCase();
+        const sb = (b.values["subject"] ?? "").toLowerCase();
+        return sa.localeCompare(sb);
+      });
+    }
+    return list;
+  }, [rows, filter, search, sortBy]);
 
   const counts = useMemo(() => ({
     all: rows.length,
@@ -242,6 +263,26 @@ function Index() {
               >
                 ⚡ Priorities
               </button>
+              <Link
+                to="/planner"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
+              >
+                🗓️ Planner
+              </Link>
+              <Link
+                to="/todo"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary md:hidden"
+              >
+                📝 To-do
+              </Link>
+              {!userId && (
+                <Link
+                  to="/auth"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90"
+                >
+                  ☁️ Sign in to sync
+                </Link>
+              )}
             </div>
           </div>
 
@@ -263,6 +304,25 @@ function Index() {
             </div>
           </div>
         </header>
+
+        {guestSnapshot && userId && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/5 px-4 py-3 text-sm">
+            <div>
+              <div className="font-semibold text-foreground">Guest data found on this device</div>
+              <div className="text-xs text-muted-foreground">
+                Merge your local lessons, todos, and planner slots into your synced account, or discard them.
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={mergeGuestSnapshot} className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90">
+                Merge into account
+              </button>
+              <button onClick={discardGuestSnapshot} className="rounded-md border border-[color:var(--border)] bg-white px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive">
+                Discard
+              </button>
+            </div>
+          </div>
+        )}
 
         {(showBanner || showPriorityMgr) && (
           <div className="mb-6 space-y-3">
@@ -325,11 +385,33 @@ function Index() {
                 ))}
               </div>
             </div>
+            <div className="mt-4">
+              <TodoList compact />
+            </div>
           </aside>
 
           <div className="space-y-6">
             <section className="rounded-2xl border border-[color:var(--border)] bg-white/90 shadow-[var(--shadow-cute)] backdrop-blur">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--border)] px-4 py-3 md:px-5">
+              <div className="flex flex-col gap-3 border-b border-[color:var(--border)] px-4 py-3 md:px-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="🔍 Search lessons…"
+                    className="min-w-0 flex-1 rounded-md border border-[color:var(--border)] bg-white px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                  />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                    className="rounded-md border border-[color:var(--border)] bg-white px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                  >
+                    <option value="none">No sort</option>
+                    <option value="subject">Sort: Subject</option>
+                    <option value="status">Sort: Status</option>
+                    <option value="date">Sort: Date</option>
+                  </select>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap gap-1.5">
                   {(["all", "todo", "progress", "done"] as const).map((k) => {
                     const active = filter === k;
@@ -365,6 +447,7 @@ function Index() {
                   >
                     + New lesson
                   </button>
+                </div>
                 </div>
               </div>
 
@@ -425,12 +508,22 @@ function Index() {
                               {ci === 0 && (
                                 <span className="pointer-events-none absolute left-0 top-1.5 h-[calc(100%-12px)] w-[3px] rounded-r bg-primary opacity-0 transition-opacity group-hover:opacity-100" />
                               )}
-                              <input
-                                value={row.values[c.id] ?? ""}
-                                onChange={(e) => updateCell(row.id, c.id, e.target.value)}
-                                placeholder={`Add ${c.label.toLowerCase()}…`}
-                                className="w-full rounded-md border border-transparent bg-transparent px-2 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
-                              />
+                              {c.id === "description" ? (
+                                <div className="px-1 py-1.5">
+                                  <DescriptionCell
+                                    value={row.values[c.id] ?? ""}
+                                    onChange={(v) => updateCell(row.id, c.id, v)}
+                                    placeholder={`Add ${c.label.toLowerCase()}…`}
+                                  />
+                                </div>
+                              ) : (
+                                <input
+                                  value={row.values[c.id] ?? ""}
+                                  onChange={(e) => updateCell(row.id, c.id, e.target.value)}
+                                  placeholder={`Add ${c.label.toLowerCase()}…`}
+                                  className="w-full rounded-md border border-transparent bg-transparent px-2 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
+                                />
+                              )}
                             </td>
                           ))}
                           <td className="px-2 py-2 align-top">
@@ -537,12 +630,22 @@ function Index() {
                             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                               {c.emoji} {c.label}
                             </span>
-                            <input
-                              value={row.values[c.id] ?? ""}
-                              onChange={(e) => updateCell(row.id, c.id, e.target.value)}
-                              placeholder={i === 0 ? "Subject name" : `Add ${c.label.toLowerCase()}…`}
-                              className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/25"
-                            />
+                            {c.id === "description" ? (
+                              <div className="mt-0.5 rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2">
+                                <DescriptionCell
+                                  value={row.values[c.id] ?? ""}
+                                  onChange={(v) => updateCell(row.id, c.id, v)}
+                                  placeholder={`Add ${c.label.toLowerCase()}…`}
+                                />
+                              </div>
+                            ) : (
+                              <input
+                                value={row.values[c.id] ?? ""}
+                                onChange={(e) => updateCell(row.id, c.id, e.target.value)}
+                                placeholder={i === 0 ? "Subject name" : `Add ${c.label.toLowerCase()}…`}
+                                className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/25"
+                              />
+                            )}
                           </label>
                         ))}
                         <div className="grid grid-cols-2 gap-2">
