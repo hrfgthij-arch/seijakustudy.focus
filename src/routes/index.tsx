@@ -305,6 +305,25 @@ function Index() {
           </div>
         </header>
 
+        {guestSnapshot && userId && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/5 px-4 py-3 text-sm">
+            <div>
+              <div className="font-semibold text-foreground">Guest data found on this device</div>
+              <div className="text-xs text-muted-foreground">
+                Merge your local lessons, todos, and planner slots into your synced account, or discard them.
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={mergeGuestSnapshot} className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90">
+                Merge into account
+              </button>
+              <button onClick={discardGuestSnapshot} className="rounded-md border border-[color:var(--border)] bg-white px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive">
+                Discard
+              </button>
+            </div>
+          </div>
+        )}
+
         {(showBanner || showPriorityMgr) && (
           <div className="mb-6 space-y-3">
             {showBanner && (
