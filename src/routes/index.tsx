@@ -263,6 +263,26 @@ function Index() {
               >
                 ⚡ Priorities
               </button>
+              <Link
+                to="/planner"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
+              >
+                🗓️ Planner
+              </Link>
+              <Link
+                to="/todo"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary md:hidden"
+              >
+                📝 To-do
+              </Link>
+              {!userId && (
+                <Link
+                  to="/auth"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90"
+                >
+                  ☁️ Sign in to sync
+                </Link>
+              )}
             </div>
           </div>
 
