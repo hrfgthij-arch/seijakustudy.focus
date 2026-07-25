@@ -508,12 +508,22 @@ function Index() {
                               {ci === 0 && (
                                 <span className="pointer-events-none absolute left-0 top-1.5 h-[calc(100%-12px)] w-[3px] rounded-r bg-primary opacity-0 transition-opacity group-hover:opacity-100" />
                               )}
-                              <input
-                                value={row.values[c.id] ?? ""}
-                                onChange={(e) => updateCell(row.id, c.id, e.target.value)}
-                                placeholder={`Add ${c.label.toLowerCase()}…`}
-                                className="w-full rounded-md border border-transparent bg-transparent px-2 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
-                              />
+                              {c.id === "description" ? (
+                                <div className="px-1 py-1.5">
+                                  <DescriptionCell
+                                    value={row.values[c.id] ?? ""}
+                                    onChange={(v) => updateCell(row.id, c.id, v)}
+                                    placeholder={`Add ${c.label.toLowerCase()}…`}
+                                  />
+                                </div>
+                              ) : (
+                                <input
+                                  value={row.values[c.id] ?? ""}
+                                  onChange={(e) => updateCell(row.id, c.id, e.target.value)}
+                                  placeholder={`Add ${c.label.toLowerCase()}…`}
+                                  className="w-full rounded-md border border-transparent bg-transparent px-2 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
+                                />
+                              )}
                             </td>
                           ))}
                           <td className="px-2 py-2 align-top">
