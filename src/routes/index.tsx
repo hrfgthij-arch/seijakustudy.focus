@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { DescriptionCell } from "@/components/DescriptionCell";
+import { TodoList } from "@/components/TodoList";
 import stickerKurisu from "@/assets/sticker-kurisu.png";
 import stickerViolet from "@/assets/sticker-violet.png";
 import stickerMahiru from "@/assets/sticker-mahiru.png";
@@ -65,17 +67,36 @@ function Index() {
     priorities, setPriorities,
     settings, setSettings,
     sleep, setSleep,
+    userId, guestSnapshot, mergeGuestSnapshot, discardGuestSnapshot,
   } = useStudyStore();
 
   const [filter, setFilter] = useState<"all" | Status>("all");
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
   const [showBanner, setShowBanner] = useState(false);
   const [showPriorityMgr, setShowPriorityMgr] = useState(false);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"none" | "subject" | "status" | "date">("none");
 
-  const visibleRows = useMemo(
-    () => (filter === "all" ? rows : rows.filter((r) => r.status === filter)),
-    [rows, filter]
-  );
+  const visibleRows = useMemo(() => {
+    let list = filter === "all" ? rows : rows.filter((r) => r.status === filter);
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter((r) =>
+        Object.values(r.values).some((v) => v?.toLowerCase().includes(q)),
+      );
+    }
+    if (sortBy !== "none") {
+      const statusOrder: Record<Status, number> = { todo: 0, progress: 1, done: 2 };
+      list = [...list].sort((a, b) => {
+        if (sortBy === "status") return statusOrder[a.status] - statusOrder[b.status];
+        if (sortBy === "date") return (a.date ?? "9999").localeCompare(b.date ?? "9999");
+        const sa = (a.values["subject"] ?? "").toLowerCase();
+        const sb = (b.values["subject"] ?? "").toLowerCase();
+        return sa.localeCompare(sb);
+      });
+    }
+    return list;
+  }, [rows, filter, search, sortBy]);
 
   const counts = useMemo(() => ({
     all: rows.length,
