@@ -385,11 +385,33 @@ function Index() {
                 ))}
               </div>
             </div>
+            <div className="mt-4">
+              <TodoList compact />
+            </div>
           </aside>
 
           <div className="space-y-6">
             <section className="rounded-2xl border border-[color:var(--border)] bg-white/90 shadow-[var(--shadow-cute)] backdrop-blur">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--border)] px-4 py-3 md:px-5">
+              <div className="flex flex-col gap-3 border-b border-[color:var(--border)] px-4 py-3 md:px-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="🔍 Search lessons…"
+                    className="min-w-0 flex-1 rounded-md border border-[color:var(--border)] bg-white px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                  />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                    className="rounded-md border border-[color:var(--border)] bg-white px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                  >
+                    <option value="none">No sort</option>
+                    <option value="subject">Sort: Subject</option>
+                    <option value="status">Sort: Status</option>
+                    <option value="date">Sort: Date</option>
+                  </select>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap gap-1.5">
                   {(["all", "todo", "progress", "done"] as const).map((k) => {
                     const active = filter === k;
