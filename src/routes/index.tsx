@@ -630,12 +630,22 @@ function Index() {
                             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                               {c.emoji} {c.label}
                             </span>
-                            <input
-                              value={row.values[c.id] ?? ""}
-                              onChange={(e) => updateCell(row.id, c.id, e.target.value)}
-                              placeholder={i === 0 ? "Subject name" : `Add ${c.label.toLowerCase()}…`}
-                              className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/25"
-                            />
+                            {c.id === "description" ? (
+                              <div className="mt-0.5 rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2">
+                                <DescriptionCell
+                                  value={row.values[c.id] ?? ""}
+                                  onChange={(v) => updateCell(row.id, c.id, v)}
+                                  placeholder={`Add ${c.label.toLowerCase()}…`}
+                                />
+                              </div>
+                            ) : (
+                              <input
+                                value={row.values[c.id] ?? ""}
+                                onChange={(e) => updateCell(row.id, c.id, e.target.value)}
+                                placeholder={i === 0 ? "Subject name" : `Add ${c.label.toLowerCase()}…`}
+                                className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/25"
+                              />
+                            )}
                           </label>
                         ))}
                         <div className="grid grid-cols-2 gap-2">
