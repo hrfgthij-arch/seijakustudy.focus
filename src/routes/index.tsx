@@ -448,6 +448,7 @@ function Index() {
                     + New lesson
                   </button>
                 </div>
+                </div>
               </div>
 
               {/* Desktop table */}
