@@ -78,6 +78,16 @@ export const DEFAULT_PRIORITIES: Priority[] = [
   { id: "low", label: "Low", color: "oklch(0.7 0.09 250)" },
 ];
 
+export const DEFAULT_TIME_RANGES: string[] = Array.from({ length: 15 }, (_, i) => `${String(6 + i).padStart(2, "0")}:00`);
+
+export const DEFAULT_TIMER_DISPLAY: TimerDisplay = {
+  theme: "light",
+  style: "digital",
+  showSeconds: false,
+  showDate: true,
+  showTimer: true,
+};
+
 export const DEFAULT_SETTINGS: Settings = {
   bannerImage: null,
   pdfUrl: null,
@@ -86,6 +96,10 @@ export const DEFAULT_SETTINGS: Settings = {
   showSleep: false,
   showPdf: false,
   weekStart: "sunday",
+  timeRanges: DEFAULT_TIME_RANGES,
+  lessonsView: "important",
+  showQuickLinks: true,
+  timerDisplay: DEFAULT_TIMER_DISPLAY,
 };
 
 export const DEFAULT_HABITS: Habit[] = [
