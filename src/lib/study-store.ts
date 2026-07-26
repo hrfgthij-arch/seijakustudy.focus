@@ -467,6 +467,7 @@ export function useStudyStore() {
     setTodos: setter("todos"),
     setPlannerSlots: setter("plannerSlots"),
     setHabits: setter("habits"),
+    setQuickLinks: setter("quickLinks"),
     hydrated: isHydrated,
     userId,
     guestSnapshot,
