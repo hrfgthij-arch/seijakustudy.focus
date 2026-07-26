@@ -767,15 +767,6 @@ function Index() {
               />
             )}
 
-            {/* Sleep tracker (opt-in) */}
-            {settings.showSleep && (
-              <SleepTracker
-                entries={sleep}
-                onChange={setSleep}
-                onHide={() => setSettings({ ...settings, showSleep: false })}
-              />
-            )}
-
             {/* Calendar planner */}
             <section className="rounded-2xl border border-[color:var(--border)] bg-white/90 shadow-[var(--shadow-cute)] backdrop-blur">
               <div className="border-b border-[color:var(--border)] px-4 py-3 md:px-5">
@@ -783,16 +774,20 @@ function Index() {
                 <p className="mt-0.5 text-xs text-muted-foreground">Dots mark days that already have lessons. Pick a day to see or plan for it.</p>
               </div>
               <div className="grid gap-4 p-4 md:grid-cols-[auto_1fr] md:p-5">
-                <Calendar
-                  mode="single"
-                  selected={selectedDay}
-                  onSelect={setSelectedDay}
-                  modifiers={{ planned: plannedDays }}
-                  modifiersClassNames={{
-                    planned: "relative font-semibold text-primary after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-primary",
-                  }}
-                  className="pointer-events-auto rounded-xl border border-[color:var(--border)] bg-white p-2"
-                />
+                {hydrated ? (
+                  <Calendar
+                    mode="single"
+                    selected={selectedDay}
+                    onSelect={setSelectedDay}
+                    modifiers={{ planned: plannedDays }}
+                    modifiersClassNames={{
+                      planned: "relative font-semibold text-primary after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-primary",
+                    }}
+                    className="pointer-events-auto rounded-xl border border-[color:var(--border)] bg-white p-2"
+                  />
+                ) : (
+                  <div className="h-[280px] w-[280px] rounded-xl border border-[color:var(--border)] bg-white/60" aria-hidden />
+                )}
                 <div className="min-w-0">
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-foreground">
