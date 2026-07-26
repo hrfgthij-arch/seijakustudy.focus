@@ -283,6 +283,7 @@ export function useStudyStore() {
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressPush = useRef(false);
   const currentUserRef = useRef<string | null>(null);
+  const lastPushAtRef = useRef(0);
 
   // Register listener
   useEffect(() => {
