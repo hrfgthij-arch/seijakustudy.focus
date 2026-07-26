@@ -847,6 +847,7 @@ function Index() {
           Tap the status pill to cycle · Click a column header to rename · Drag the timer's corner to resize · Everything saves to your browser
         </footer>
       </div>
+      <MobileStickyTimer />
     </main>
   );
 }
