@@ -424,6 +424,15 @@ function Index() {
           </aside>
 
           <div className="space-y-6">
+            {settings.showQuickLinks && (
+              <div className="hidden md:block">
+                <QuickLinksTable
+                  links={quickLinks}
+                  onChange={setQuickLinks}
+                  onHide={() => setSettings({ ...settings, showQuickLinks: false })}
+                />
+              </div>
+            )}
             <section className="rounded-2xl border border-[color:var(--border)] bg-white/90 shadow-[var(--shadow-cute)] backdrop-blur">
               <div className="flex flex-col gap-3 border-b border-[color:var(--border)] px-4 py-3 md:px-5">
                 <div className="flex flex-wrap items-center gap-2">
