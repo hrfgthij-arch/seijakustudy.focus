@@ -359,13 +359,15 @@ export function useStudyStore() {
         if (!hasMeaningfulData(remote)) await pushRemote(uid, chosen);
       }
 
-      // Realtime subscription
+      // Realtime subscription — skip echoes of our own recent writes so we don't
+      // yank characters out of an input mid-typing.
       channel = supabase
         .channel(`study-state-${uid}`)
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "study_state", filter: `user_id=eq.${uid}` },
           async () => {
+            if (Date.now() - lastPushAtRef.current < 2500) return;
             const { data: fresh } = await fetchRemote(uid);
             if (fresh) {
               suppressPush.current = true;
