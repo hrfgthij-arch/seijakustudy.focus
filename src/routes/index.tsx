@@ -319,6 +319,16 @@ function Index() {
               >
                 <StudyTimer />
               </ResizableBox>
+              {settings.showSleep && (
+                <div className="w-full md:w-[360px]">
+                  <SleepTracker
+                    entries={sleep}
+                    onChange={setSleep}
+                    onHide={() => setSettings({ ...settings, showSleep: false })}
+                    weekStart={settings.weekStart}
+                  />
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               <SummaryChip label="Total" value={counts.all} tone="neutral" />
