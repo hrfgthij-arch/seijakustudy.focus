@@ -400,6 +400,7 @@ export function useStudyStore() {
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(() => {
       if (navigator.onLine !== false) {
+        lastPushAtRef.current = Date.now();
         pushRemote(uid, state).catch(() => {});
       }
     }, 600);
