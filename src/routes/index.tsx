@@ -467,7 +467,28 @@ function Index() {
                     );
                   })}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() =>
+                      setSettings({ ...settings, lessonsView: importantOnly ? "all" : "important" })
+                    }
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      importantOnly
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-[color:var(--border)] bg-white text-foreground hover:border-primary"
+                    }`}
+                    title="Toggle showing only important lessons"
+                  >
+                    {importantOnly ? "⭐ Important only" : "📚 Showing all"}
+                  </button>
+                  {!settings.showQuickLinks && (
+                    <button
+                      onClick={() => setSettings({ ...settings, showQuickLinks: true })}
+                      className="rounded-lg border border-dashed border-[color:var(--border)] bg-white px-3 py-1.5 text-xs font-semibold text-foreground hover:border-primary hover:text-primary"
+                    >
+                      🔗 Show quick links
+                    </button>
+                  )}
                   <button
                     onClick={addColumn}
                     className="rounded-lg border border-dashed border-[color:var(--border)] bg-white px-3 py-1.5 text-xs font-semibold text-foreground hover:border-primary hover:text-primary"
