@@ -15,17 +15,41 @@ export type Row = {
   priorityId: string | null;
 };
 
-export type SleepEntry = { id: string; date: string; hours: number; note: string };
+export type SleepEntry = {
+  id: string;
+  date: string;
+  hours: number;
+  note: string;
+  sleepTime?: string | null;
+  wakeTime?: string | null;
+};
 
 export type Todo = { id: string; text: string; done: boolean; createdAt: string };
 
-// Planner: slots keyed by `${weekday}|${startTime}` -> { subject, note }
-export type PlannerSlot = { id: string; weekday: number; time: string; subject: string; note: string };
+// Planner: `subjects` is the multi-subject field; `subject` kept for backward compat.
+export type PlannerSlot = {
+  id: string;
+  weekday: number;
+  time: string;
+  subject: string;
+  subjects?: string[];
+  note: string;
+};
 
 // Consistency: per-habit list of ISO dates ticked
 export type Habit = { id: string; label: string; dates: string[] };
 
 export type WeekStart = "sunday" | "monday";
+
+export type QuickLink = { id: string; label: string; url: string; icon?: string };
+
+export type TimerDisplay = {
+  theme: "light" | "dark";
+  style: "digital" | "flip" | "minimal";
+  showSeconds: boolean;
+  showDate: boolean;
+  showTimer: boolean;
+};
 
 export type Settings = {
   bannerImage: string | null;
@@ -35,6 +59,10 @@ export type Settings = {
   showSleep: boolean;
   showPdf: boolean;
   weekStart: WeekStart;
+  timeRanges: string[];
+  lessonsView: "important" | "all";
+  showQuickLinks: boolean;
+  timerDisplay: TimerDisplay;
 };
 
 export const DEFAULT_COLUMNS: Column[] = [
