@@ -147,6 +147,7 @@ export type State = {
   todos: Todo[];
   plannerSlots: PlannerSlot[];
   habits: Habit[];
+  quickLinks: QuickLink[];
 };
 
 function emptyState(): State {
@@ -159,6 +160,7 @@ function emptyState(): State {
     todos: [],
     plannerSlots: [],
     habits: DEFAULT_HABITS,
+    quickLinks: [],
   };
 }
 
@@ -173,17 +175,42 @@ function migrateRow(r: any): Row {
   };
 }
 
+function migrateSlot(s: any): PlannerSlot {
+  const subjects: string[] = Array.isArray(s?.subjects)
+    ? s.subjects.filter(Boolean)
+    : s?.subject
+    ? [s.subject]
+    : [];
+  return {
+    id: s.id ?? Math.random().toString(36).slice(2, 10),
+    weekday: s.weekday,
+    time: s.time,
+    subject: s.subject ?? subjects[0] ?? "",
+    subjects,
+    note: s.note ?? "",
+  };
+}
+
 function normalizeState(parsed: any): State {
   const base = emptyState();
   return {
     columns: parsed?.columns?.length ? parsed.columns : base.columns,
     rows: (parsed?.rows ?? []).map(migrateRow),
     priorities: parsed?.priorities?.length ? parsed.priorities : base.priorities,
-    settings: { ...base.settings, ...(parsed?.settings ?? {}) },
+    settings: {
+      ...base.settings,
+      ...(parsed?.settings ?? {}),
+      timeRanges:
+        Array.isArray(parsed?.settings?.timeRanges) && parsed.settings.timeRanges.length
+          ? parsed.settings.timeRanges
+          : base.settings.timeRanges,
+      timerDisplay: { ...base.settings.timerDisplay, ...(parsed?.settings?.timerDisplay ?? {}) },
+    },
     sleep: parsed?.sleep ?? [],
     todos: parsed?.todos ?? [],
-    plannerSlots: parsed?.plannerSlots ?? [],
+    plannerSlots: (parsed?.plannerSlots ?? []).map(migrateSlot),
     habits: parsed?.habits?.length ? parsed.habits : base.habits,
+    quickLinks: Array.isArray(parsed?.quickLinks) ? parsed.quickLinks : [],
   };
 }
 
