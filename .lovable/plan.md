@@ -1,83 +1,60 @@
+# Fix bugs and add requested features
 
-## 1. Search & sort on the main lessons table
-- Add a search input (filters across subject, lesson, description).
-- Add sort dropdown: Subject (A→Z), Status, Date (asc/desc), Priority.
-- Applied on both desktop table and mobile cards.
+## Bugs to fix
 
-## 2. Hover-to-edit description
-- Description cell shows text as before.
-- On hover, a small pencil icon appears in the corner.
-- Click pencil → cell becomes an editable textarea with Save/Cancel; blur = save.
-- Same behavior on mobile cards (tap the pencil).
+### 1. "Plan your days…" tagline duplicates atop the Description column
+Cause: the header row and the lessons table both share the same responsive grid parent. When the viewport shrinks or a column is added the header block collapses into the same column track and stacks on top of the Description column.
+Fix in `src/routes/index.tsx`: move the tagline block out of the responsive grid into its own full-width `<div>` above the `grid lg:grid-cols-[240px_1fr]` wrapper, and give the tagline `col-span-full` fallback. No content change to the text itself.
 
-## 3. New page: `/planner` — Self-Study Planner
-Route: `src/routes/planner.tsx`. Two stacked sections:
+### 2. Typing anywhere causes visible "glitch" (input flicker / caret jump)
+Cause: `useStudyStore` recreates a new `state` object on every keystroke, which pushes to every listener; each edit also runs the debounced cloud push. On slower devices this re-renders the whole page and steals focus. Two fixes:
+- Debounce cell writes locally: `DescriptionCell` and text-cell inputs keep a local `draft` and only call `setRows` on blur / Ctrl+Enter (already true for description — extend to every editable cell in `index.tsx`, `planner.tsx`, `todo.tsx`, `SleepTracker`).
+- Split shared state re-renders: give `useStudyStore` a `useSyncExternalStore` selector variant `useStudyStoreSlice(fn)` so components subscribe only to the slice they read. Callers that mutate use a stable `store.set*` returned from a ref, not a re-created closure.
 
-**a) Weekly self-study planner (with time ranges)**
-- Table with columns: Subject, Topic, Day (Mon–Sun), Start time, End time, Notes.
-- Add/remove rows; stored per user.
-- A shadcn Calendar next to it: pick a date to plan a week in advance; selected date scopes which "week of" the planner shows. Week key = ISO week from the chosen start-of-week.
+### 3. Description editor UX
+`DescriptionCell` becomes:
+- Hover → text turns into a translucent textbox (readonly) previewing the full text.
+- Click → same textbox becomes editable, autofocused, caret at end, shows everything entered (auto-grow with `field-sizing: content` fallback to rows).
+- Style: `bg-white/40 backdrop-blur border-white/60` when hovered, `bg-white/70` when focused.
 
-**b) Consistency tracker (week grid)**
-- Rows = planner items; columns = 7 days of the current week.
-- Checkboxes per day; footer shows % consistency for the week.
-- Results grouped week-wise, navigable back/forward.
-- Setting: **Start week on Sunday (default) or Monday**. First visit shows a one-time prompt; also editable in settings panel.
+## Feature changes
 
-## 4. To-do list
-- **Desktop (lg+):** right-side column on `/` (index) with a To-do table (text + checkbox + delete).
-- **Mobile:** new page `/todo` (`src/routes/todo.tsx`), linked from a bottom nav / header link.
-- Shared store; syncs to cloud.
+### 4. Self-Study Planner — multi-subject cells and custom time ranges
+- Change `PlannerSlot` in `study-store.ts` from one subject per `weekday|time` to `subjects: string[]` (array) plus keep `note`.
+- Add editable `timeRanges: string[]` on `settings` (default the current 06:00–20:00 hourly list). Settings UI in `planner.tsx`: add / remove / rename a range (e.g. `07:30–09:00`).
+- Cell UI: chip list with `+ subject` inline input; Enter appends, × removes.
 
-## 5. Auth (Lovable Cloud)
-Enable Lovable Cloud. Sign-in methods:
-- Email + password
-- Google
-- Magic link (email OTP) — this covers the "unique code" ask (Supabase emails a 6-digit code / link)
+### 5. Pomodoro timer — sticky on mobile, translucent, full-screen mode
+- Wrap the existing `StudyTimer` in a new `MobileStickyTimer` that, on `<lg` widths and only while `running`, renders a `position: fixed; bottom: 12px; right: 12px` translucent card (`bg-white/55 backdrop-blur`) that persists across scroll. Hidden when not running.
+- All timer surfaces get `bg-white/70 backdrop-blur` (partially transparent).
+- Add a ⛶ fullscreen button on the timer. Clicking opens a new `TimerFullscreen` overlay (portal, `fixed inset-0 z-50`) that by default shows the giant clock + timer. A `⋮` menu in the corner opens a settings panel:
+  - Theme: Light / Dark
+  - Clock style: Digital / Flip clock / Minimal
+  - Show seconds: on/off
+  - Show date: on/off
+  - Show timer: on/off
+- Persist these in `settings.timerDisplay`.
 
-Auth page at `/auth`. Guest mode remains: unauthenticated users use localStorage as today. Header shows Sign in / account menu.
+### 6. Lessons — show only important by default
+- Add `settings.lessonsView: "important" | "all"` (default `important`).
+- "Important" = rows whose `priorityId` is `urgent` or `high`, OR status = `progress`. If none match, fall back to first 5.
+- Add a ⚙️ button on the lessons toolbar opening a small popover: toggle All/Important, plus a multi-select of which priorities count as important.
 
-## 6. Cloud data model + sync
-Tables (RLS: `auth.uid() = user_id`), plus GRANTs for `authenticated`, `service_role`:
-- `profiles(id, week_start)` — week_start = 'sunday' | 'monday'
-- `columns(id, user_id, label, emoji, position)`
-- `priorities(id, user_id, label, color, position)`
-- `rows(id, user_id, values jsonb, status, date, time, priority_id, position, updated_at)`
-- `planner_items(id, user_id, subject, topic, day_of_week, start_time, end_time, notes, updated_at)`
-- `consistency_ticks(id, user_id, planner_item_id, week_start_date, day_of_week, done, updated_at)`
-- `todos(id, user_id, text, done, position, updated_at)`
-- `sleep_entries(id, user_id, date, hours, note)`
-- `settings(user_id, banner_image, pdf_url, pdf_name, timer_w, timer_h, show_sleep, show_pdf, week_start)`
+### 7. Quick Links
+- New `quickLinks: { id, label, url, icon? }[]` on state.
+- Desktop: new `QuickLinksTable` component; render in the right column above the lessons table with a "Hide" toggle (`settings.showQuickLinks`, default true). Reveal via a small "Show quick links" button when hidden.
+- Mobile: add `src/routes/links.tsx` route + a "🔗 Links" chip in the header.
+- Table columns: Label · URL (click to open in new tab) · ✎ · 🗑. Add-row inline form at the bottom.
 
-## 7. Realtime + offline cache
-- Supabase Realtime channel per table (filtered by `user_id`) → updates local cache instantly.
-- Local cache layer (`src/lib/sync-store.ts`) built on IndexedDB (via `idb-keyval`), mirrors cloud rows.
-- Writes: optimistic → local cache → outbox queue → push to Supabase when online.
-- `navigator.onLine` + `online`/`offline` events flush the outbox. Conflicts resolved last-write-wins by `updated_at`.
+### 8. Sleep tracker — weekly table near clock
+- Replace `SleepTracker` box UI with a compact 7-row table (`Day | Sleep time | Wake time | Hours | Note`). Hours is auto-calculated from times (handles crossing midnight).
+- Move it into the header cluster next to `ClockWidget` / `StudyTimer` (same wrap container). Still gated by `settings.showSleep`.
+- Data model: extend `SleepEntry` with `sleepTime: string | null`, `wakeTime: string | null`. Existing `hours` remains derived/manual. Migration in `normalizeState`.
 
-## 8. Guest → account migration
-- On successful signup (first login), detect localStorage guest data.
-- Show a dialog: **Keep local**, **Keep cloud**, or **Merge**.
-  - Keep local: overwrite cloud with guest data (bulk upsert).
-  - Keep cloud: discard local, load cloud.
-  - Merge: upsert local rows into cloud by id; keep cloud rows not present locally.
-- After choice, clear guest localStorage and switch to cloud store.
+## Technical notes
 
-## Files to add
-- `src/routes/auth.tsx`, `src/routes/planner.tsx`, `src/routes/todo.tsx`
-- `src/components/TodoList.tsx`, `src/components/WeekPlannerTable.tsx`, `src/components/ConsistencyGrid.tsx`, `src/components/DescriptionCell.tsx`, `src/components/SearchSortBar.tsx`, `src/components/MigrateGuestDataDialog.tsx`, `src/components/AuthMenu.tsx`
-- `src/lib/sync-store.ts` (unified cloud+local store replacing `useStudyStore`), `src/lib/week.ts` (week math)
-- Supabase migration with all tables, RLS, grants, triggers for `updated_at`.
-
-## Files to touch
-- `src/routes/__root.tsx` (nav links, auth provider)
-- `src/routes/index.tsx` (search/sort bar, hover-edit description, desktop to-do sidebar)
-- `src/routes/progress.tsx` (read from new store)
-- `src/lib/study-store.ts` (thin wrapper delegating to sync-store, keeps guest path)
-
-## Validation
-- Typecheck + build.
-- Manual: guest add row → sign up → migrate dialog → row appears in cloud.
-- Two tabs signed in as same user: change on tab A appears on tab B without refresh.
-- Offline: toggle DevTools offline, add row, go online → row syncs.
-- Search/sort filters both layouts. Hover pencil edits description. Planner week toggles Sun/Mon.
+- Store version bump to v5 in `study-store.ts`; migrate v4 → v5 preserving all fields, defaulting new ones (`timeRanges`, `lessonsView`, `showQuickLinks`, `quickLinks`, `timerDisplay`, `PlannerSlot.subjects` from prior single `subject`).
+- New files: `src/components/QuickLinksTable.tsx`, `src/components/TimerFullscreen.tsx`, `src/components/MobileStickyTimer.tsx`, `src/routes/links.tsx`.
+- Edited files: `src/lib/study-store.ts`, `src/components/DescriptionCell.tsx`, `src/components/StudyTimer.tsx`, `src/components/SleepTracker.tsx`, `src/routes/index.tsx`, `src/routes/planner.tsx`, `src/routes/__root.tsx` (nav link for Links on mobile).
+- No backend/schema changes required — state is a JSON blob in `study_state.data`.
+- Verification: run build, then Playwright the preview at mobile + desktop viewports to confirm no duplicated tagline, no input flicker, sticky timer while running, fullscreen overlay opens, quick links table renders and hides, sleep table sits beside the clock.
