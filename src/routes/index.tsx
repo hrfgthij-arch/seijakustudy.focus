@@ -68,15 +68,25 @@ function Index() {
     priorities, setPriorities,
     settings, setSettings,
     sleep, setSleep,
+    quickLinks, setQuickLinks,
+    hydrated,
     userId, guestSnapshot, mergeGuestSnapshot, discardGuestSnapshot,
   } = useStudyStore();
 
   const [filter, setFilter] = useState<"all" | Status>("all");
-  const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
+  const [selectedDay, setSelectedDay] = useState<Date | undefined>(undefined);
   const [showBanner, setShowBanner] = useState(false);
   const [showPriorityMgr, setShowPriorityMgr] = useState(false);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"none" | "subject" | "status" | "date">("none");
+
+  // Default the selected day to today only after hydration to avoid SSR/CSR locale mismatch.
+  useEffect(() => {
+    if (hydrated && !selectedDay) setSelectedDay(new Date());
+  }, [hydrated, selectedDay]);
+
+  const importantPriorityIds = new Set(["urgent", "high"]);
+  const importantOnly = settings.lessonsView === "important";
 
   const visibleRows = useMemo(() => {
     let list = filter === "all" ? rows : rows.filter((r) => r.status === filter);
@@ -85,6 +95,12 @@ function Index() {
       list = list.filter((r) =>
         Object.values(r.values).some((v) => v?.toLowerCase().includes(q)),
       );
+    }
+    if (importantOnly && !q && filter === "all") {
+      const important = list.filter(
+        (r) => (r.priorityId && importantPriorityIds.has(r.priorityId)) || r.status === "progress",
+      );
+      list = important.length ? important : list.slice(0, 5);
     }
     if (sortBy !== "none") {
       const statusOrder: Record<Status, number> = { todo: 0, progress: 1, done: 2 };
@@ -97,7 +113,7 @@ function Index() {
       });
     }
     return list;
-  }, [rows, filter, search, sortBy]);
+  }, [rows, filter, search, sortBy, importantOnly]);
 
   const counts = useMemo(() => ({
     all: rows.length,
