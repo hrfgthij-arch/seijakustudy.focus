@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DescriptionCell } from "@/components/DescriptionCell";
 import { TodoList } from "@/components/TodoList";
 import stickerKurisu from "@/assets/sticker-kurisu.png";
@@ -11,7 +11,8 @@ import stickerSkirk from "@/assets/sticker-skirk.png";
 import stickerNavia from "@/assets/sticker-navia.png";
 import { Calendar } from "@/components/ui/calendar";
 import { Donut } from "@/components/Donut";
-import { ClockWidget, StudyTimer } from "@/components/StudyTimer";
+import { ClockWidget, MobileStickyTimer, StudyTimer } from "@/components/StudyTimer";
+import { QuickLinksTable } from "@/components/QuickLinksTable";
 import { ResizableBox } from "@/components/ResizableBox";
 import { BannerUploader } from "@/components/BannerUploader";
 import { PdfWidget } from "@/components/PdfWidget";
@@ -67,15 +68,25 @@ function Index() {
     priorities, setPriorities,
     settings, setSettings,
     sleep, setSleep,
+    quickLinks, setQuickLinks,
+    hydrated,
     userId, guestSnapshot, mergeGuestSnapshot, discardGuestSnapshot,
   } = useStudyStore();
 
   const [filter, setFilter] = useState<"all" | Status>("all");
-  const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
+  const [selectedDay, setSelectedDay] = useState<Date | undefined>(undefined);
   const [showBanner, setShowBanner] = useState(false);
   const [showPriorityMgr, setShowPriorityMgr] = useState(false);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"none" | "subject" | "status" | "date">("none");
+
+  // Default the selected day to today only after hydration to avoid SSR/CSR locale mismatch.
+  useEffect(() => {
+    if (hydrated && !selectedDay) setSelectedDay(new Date());
+  }, [hydrated, selectedDay]);
+
+  const importantPriorityIds = new Set(["urgent", "high"]);
+  const importantOnly = settings.lessonsView === "important";
 
   const visibleRows = useMemo(() => {
     let list = filter === "all" ? rows : rows.filter((r) => r.status === filter);
@@ -84,6 +95,12 @@ function Index() {
       list = list.filter((r) =>
         Object.values(r.values).some((v) => v?.toLowerCase().includes(q)),
       );
+    }
+    if (importantOnly && !q && filter === "all") {
+      const important = list.filter(
+        (r) => (r.priorityId && importantPriorityIds.has(r.priorityId)) || r.status === "progress",
+      );
+      list = important.length ? important : list.slice(0, 5);
     }
     if (sortBy !== "none") {
       const statusOrder: Record<Status, number> = { todo: 0, progress: 1, done: 2 };
@@ -96,7 +113,7 @@ function Index() {
       });
     }
     return list;
-  }, [rows, filter, search, sortBy]);
+  }, [rows, filter, search, sortBy, importantOnly]);
 
   const counts = useMemo(() => ({
     all: rows.length,
@@ -275,6 +292,12 @@ function Index() {
               >
                 📝 To-do
               </Link>
+              <Link
+                to="/links"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary md:hidden"
+              >
+                🔗 Links
+              </Link>
               {!userId && (
                 <Link
                   to="/auth"
@@ -296,6 +319,16 @@ function Index() {
               >
                 <StudyTimer />
               </ResizableBox>
+              {settings.showSleep && (
+                <div className="w-full md:w-[360px]">
+                  <SleepTracker
+                    entries={sleep}
+                    onChange={setSleep}
+                    onHide={() => setSettings({ ...settings, showSleep: false })}
+                    weekStart={settings.weekStart}
+                  />
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               <SummaryChip label="Total" value={counts.all} tone="neutral" />
@@ -391,6 +424,15 @@ function Index() {
           </aside>
 
           <div className="space-y-6">
+            {settings.showQuickLinks && (
+              <div className="hidden md:block">
+                <QuickLinksTable
+                  links={quickLinks}
+                  onChange={setQuickLinks}
+                  onHide={() => setSettings({ ...settings, showQuickLinks: false })}
+                />
+              </div>
+            )}
             <section className="rounded-2xl border border-[color:var(--border)] bg-white/90 shadow-[var(--shadow-cute)] backdrop-blur">
               <div className="flex flex-col gap-3 border-b border-[color:var(--border)] px-4 py-3 md:px-5">
                 <div className="flex flex-wrap items-center gap-2">
@@ -434,7 +476,28 @@ function Index() {
                     );
                   })}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() =>
+                      setSettings({ ...settings, lessonsView: importantOnly ? "all" : "important" })
+                    }
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      importantOnly
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-[color:var(--border)] bg-white text-foreground hover:border-primary"
+                    }`}
+                    title="Toggle showing only important lessons"
+                  >
+                    {importantOnly ? "⭐ Important only" : "📚 Showing all"}
+                  </button>
+                  {!settings.showQuickLinks && (
+                    <button
+                      onClick={() => setSettings({ ...settings, showQuickLinks: true })}
+                      className="rounded-lg border border-dashed border-[color:var(--border)] bg-white px-3 py-1.5 text-xs font-semibold text-foreground hover:border-primary hover:text-primary"
+                    >
+                      🔗 Show quick links
+                    </button>
+                  )}
                   <button
                     onClick={addColumn}
                     className="rounded-lg border border-dashed border-[color:var(--border)] bg-white px-3 py-1.5 text-xs font-semibold text-foreground hover:border-primary hover:text-primary"
@@ -704,15 +767,6 @@ function Index() {
               />
             )}
 
-            {/* Sleep tracker (opt-in) */}
-            {settings.showSleep && (
-              <SleepTracker
-                entries={sleep}
-                onChange={setSleep}
-                onHide={() => setSettings({ ...settings, showSleep: false })}
-              />
-            )}
-
             {/* Calendar planner */}
             <section className="rounded-2xl border border-[color:var(--border)] bg-white/90 shadow-[var(--shadow-cute)] backdrop-blur">
               <div className="border-b border-[color:var(--border)] px-4 py-3 md:px-5">
@@ -720,16 +774,20 @@ function Index() {
                 <p className="mt-0.5 text-xs text-muted-foreground">Dots mark days that already have lessons. Pick a day to see or plan for it.</p>
               </div>
               <div className="grid gap-4 p-4 md:grid-cols-[auto_1fr] md:p-5">
-                <Calendar
-                  mode="single"
-                  selected={selectedDay}
-                  onSelect={setSelectedDay}
-                  modifiers={{ planned: plannedDays }}
-                  modifiersClassNames={{
-                    planned: "relative font-semibold text-primary after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-primary",
-                  }}
-                  className="pointer-events-auto rounded-xl border border-[color:var(--border)] bg-white p-2"
-                />
+                {hydrated ? (
+                  <Calendar
+                    mode="single"
+                    selected={selectedDay}
+                    onSelect={setSelectedDay}
+                    modifiers={{ planned: plannedDays }}
+                    modifiersClassNames={{
+                      planned: "relative font-semibold text-primary after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-primary",
+                    }}
+                    className="pointer-events-auto rounded-xl border border-[color:var(--border)] bg-white p-2"
+                  />
+                ) : (
+                  <div className="h-[280px] w-[280px] rounded-xl border border-[color:var(--border)] bg-white/60" aria-hidden />
+                )}
                 <div className="min-w-0">
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-foreground">
@@ -789,6 +847,7 @@ function Index() {
           Tap the status pill to cycle · Click a column header to rename · Drag the timer's corner to resize · Everything saves to your browser
         </footer>
       </div>
+      <MobileStickyTimer />
     </main>
   );
 }

@@ -15,17 +15,41 @@ export type Row = {
   priorityId: string | null;
 };
 
-export type SleepEntry = { id: string; date: string; hours: number; note: string };
+export type SleepEntry = {
+  id: string;
+  date: string;
+  hours: number;
+  note: string;
+  sleepTime?: string | null;
+  wakeTime?: string | null;
+};
 
 export type Todo = { id: string; text: string; done: boolean; createdAt: string };
 
-// Planner: slots keyed by `${weekday}|${startTime}` -> { subject, note }
-export type PlannerSlot = { id: string; weekday: number; time: string; subject: string; note: string };
+// Planner: `subjects` is the multi-subject field; `subject` kept for backward compat.
+export type PlannerSlot = {
+  id: string;
+  weekday: number;
+  time: string;
+  subject: string;
+  subjects?: string[];
+  note: string;
+};
 
 // Consistency: per-habit list of ISO dates ticked
 export type Habit = { id: string; label: string; dates: string[] };
 
 export type WeekStart = "sunday" | "monday";
+
+export type QuickLink = { id: string; label: string; url: string; icon?: string };
+
+export type TimerDisplay = {
+  theme: "light" | "dark";
+  style: "digital" | "flip" | "minimal";
+  showSeconds: boolean;
+  showDate: boolean;
+  showTimer: boolean;
+};
 
 export type Settings = {
   bannerImage: string | null;
@@ -35,6 +59,10 @@ export type Settings = {
   showSleep: boolean;
   showPdf: boolean;
   weekStart: WeekStart;
+  timeRanges: string[];
+  lessonsView: "important" | "all";
+  showQuickLinks: boolean;
+  timerDisplay: TimerDisplay;
 };
 
 export const DEFAULT_COLUMNS: Column[] = [
@@ -50,6 +78,16 @@ export const DEFAULT_PRIORITIES: Priority[] = [
   { id: "low", label: "Low", color: "oklch(0.7 0.09 250)" },
 ];
 
+export const DEFAULT_TIME_RANGES: string[] = Array.from({ length: 15 }, (_, i) => `${String(6 + i).padStart(2, "0")}:00`);
+
+export const DEFAULT_TIMER_DISPLAY: TimerDisplay = {
+  theme: "light",
+  style: "digital",
+  showSeconds: false,
+  showDate: true,
+  showTimer: true,
+};
+
 export const DEFAULT_SETTINGS: Settings = {
   bannerImage: null,
   pdfUrl: null,
@@ -58,6 +96,10 @@ export const DEFAULT_SETTINGS: Settings = {
   showSleep: false,
   showPdf: false,
   weekStart: "sunday",
+  timeRanges: DEFAULT_TIME_RANGES,
+  lessonsView: "important",
+  showQuickLinks: true,
+  timerDisplay: DEFAULT_TIMER_DISPLAY,
 };
 
 export const DEFAULT_HABITS: Habit[] = [
@@ -105,6 +147,7 @@ export type State = {
   todos: Todo[];
   plannerSlots: PlannerSlot[];
   habits: Habit[];
+  quickLinks: QuickLink[];
 };
 
 function emptyState(): State {
@@ -117,6 +160,7 @@ function emptyState(): State {
     todos: [],
     plannerSlots: [],
     habits: DEFAULT_HABITS,
+    quickLinks: [],
   };
 }
 
@@ -131,17 +175,42 @@ function migrateRow(r: any): Row {
   };
 }
 
+function migrateSlot(s: any): PlannerSlot {
+  const subjects: string[] = Array.isArray(s?.subjects)
+    ? s.subjects.filter(Boolean)
+    : s?.subject
+    ? [s.subject]
+    : [];
+  return {
+    id: s.id ?? Math.random().toString(36).slice(2, 10),
+    weekday: s.weekday,
+    time: s.time,
+    subject: s.subject ?? subjects[0] ?? "",
+    subjects,
+    note: s.note ?? "",
+  };
+}
+
 function normalizeState(parsed: any): State {
   const base = emptyState();
   return {
     columns: parsed?.columns?.length ? parsed.columns : base.columns,
     rows: (parsed?.rows ?? []).map(migrateRow),
     priorities: parsed?.priorities?.length ? parsed.priorities : base.priorities,
-    settings: { ...base.settings, ...(parsed?.settings ?? {}) },
+    settings: {
+      ...base.settings,
+      ...(parsed?.settings ?? {}),
+      timeRanges:
+        Array.isArray(parsed?.settings?.timeRanges) && parsed.settings.timeRanges.length
+          ? parsed.settings.timeRanges
+          : base.settings.timeRanges,
+      timerDisplay: { ...base.settings.timerDisplay, ...(parsed?.settings?.timerDisplay ?? {}) },
+    },
     sleep: parsed?.sleep ?? [],
     todos: parsed?.todos ?? [],
-    plannerSlots: parsed?.plannerSlots ?? [],
+    plannerSlots: (parsed?.plannerSlots ?? []).map(migrateSlot),
     habits: parsed?.habits?.length ? parsed.habits : base.habits,
+    quickLinks: Array.isArray(parsed?.quickLinks) ? parsed.quickLinks : [],
   };
 }
 
@@ -214,6 +283,7 @@ export function useStudyStore() {
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressPush = useRef(false);
   const currentUserRef = useRef<string | null>(null);
+  const lastPushAtRef = useRef(0);
 
   // Register listener
   useEffect(() => {
@@ -289,13 +359,15 @@ export function useStudyStore() {
         if (!hasMeaningfulData(remote)) await pushRemote(uid, chosen);
       }
 
-      // Realtime subscription
+      // Realtime subscription — skip echoes of our own recent writes so we don't
+      // yank characters out of an input mid-typing.
       channel = supabase
         .channel(`study-state-${uid}`)
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "study_state", filter: `user_id=eq.${uid}` },
           async () => {
+            if (Date.now() - lastPushAtRef.current < 2500) return;
             const { data: fresh } = await fetchRemote(uid);
             if (fresh) {
               suppressPush.current = true;
@@ -328,6 +400,7 @@ export function useStudyStore() {
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(() => {
       if (navigator.onLine !== false) {
+        lastPushAtRef.current = Date.now();
         pushRemote(uid, state).catch(() => {});
       }
     }, 600);
@@ -394,6 +467,7 @@ export function useStudyStore() {
     setTodos: setter("todos"),
     setPlannerSlots: setter("plannerSlots"),
     setHabits: setter("habits"),
+    setQuickLinks: setter("quickLinks"),
     hydrated: isHydrated,
     userId,
     guestSnapshot,
