@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DescriptionCell } from "@/components/DescriptionCell";
 import { TodoList } from "@/components/TodoList";
 import stickerKurisu from "@/assets/sticker-kurisu.png";
