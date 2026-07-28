@@ -299,6 +299,12 @@ function Index() {
               >
                 🔗 Links
               </Link>
+              <Link
+                to="/sleep"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary md:hidden"
+              >
+                🌙 Sleep
+              </Link>
               {!userId && (
                 <Link
                   to="/auth"
