@@ -140,6 +140,7 @@ function TimerCard({ variant }: { variant: "full" | "sticky" }) {
           running={running}
           toggleRun={toggleRun}
           reset={reset}
+          setPreset={setPreset}
           mm={mm}
           ss={ss}
         />

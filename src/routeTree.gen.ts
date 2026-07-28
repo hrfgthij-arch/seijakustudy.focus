@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TodoRouteImport } from './routes/todo'
+import { Route as SleepRouteImport } from './routes/sleep'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as PlannerRouteImport } from './routes/planner'
 import { Route as LinksRouteImport } from './routes/links'
@@ -19,6 +20,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const TodoRoute = TodoRouteImport.update({
   id: '/todo',
   path: '/todo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SleepRoute = SleepRouteImport.update({
+  id: '/sleep',
+  path: '/sleep',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProgressRoute = ProgressRouteImport.update({
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/links': typeof LinksRoute
   '/planner': typeof PlannerRoute
   '/progress': typeof ProgressRoute
+  '/sleep': typeof SleepRoute
   '/todo': typeof TodoRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/links': typeof LinksRoute
   '/planner': typeof PlannerRoute
   '/progress': typeof ProgressRoute
+  '/sleep': typeof SleepRoute
   '/todo': typeof TodoRoute
 }
 export interface FileRoutesById {
@@ -70,14 +78,30 @@ export interface FileRoutesById {
   '/links': typeof LinksRoute
   '/planner': typeof PlannerRoute
   '/progress': typeof ProgressRoute
+  '/sleep': typeof SleepRoute
   '/todo': typeof TodoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/links' | '/planner' | '/progress' | '/todo'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/links'
+    | '/planner'
+    | '/progress'
+    | '/sleep'
+    | '/todo'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/links' | '/planner' | '/progress' | '/todo'
-  id: '__root__' | '/' | '/auth' | '/links' | '/planner' | '/progress' | '/todo'
+  to: '/' | '/auth' | '/links' | '/planner' | '/progress' | '/sleep' | '/todo'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/links'
+    | '/planner'
+    | '/progress'
+    | '/sleep'
+    | '/todo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -86,6 +110,7 @@ export interface RootRouteChildren {
   LinksRoute: typeof LinksRoute
   PlannerRoute: typeof PlannerRoute
   ProgressRoute: typeof ProgressRoute
+  SleepRoute: typeof SleepRoute
   TodoRoute: typeof TodoRoute
 }
 
@@ -96,6 +121,13 @@ declare module '@tanstack/react-router' {
       path: '/todo'
       fullPath: '/todo'
       preLoaderRoute: typeof TodoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sleep': {
+      id: '/sleep'
+      path: '/sleep'
+      fullPath: '/sleep'
+      preLoaderRoute: typeof SleepRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/progress': {
@@ -142,6 +174,7 @@ const rootRouteChildren: RootRouteChildren = {
   LinksRoute: LinksRoute,
   PlannerRoute: PlannerRoute,
   ProgressRoute: ProgressRoute,
+  SleepRoute: SleepRoute,
   TodoRoute: TodoRoute,
 }
 export const routeTree = rootRouteImport
