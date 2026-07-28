@@ -102,6 +102,8 @@ export const DEFAULT_SETTINGS: Settings = {
   lessonsView: "important",
   showQuickLinks: true,
   timerDisplay: DEFAULT_TIMER_DISPLAY,
+  spotifyUrl: null,
+  showSpotify: true,
 };
 
 export const DEFAULT_HABITS: Habit[] = [
