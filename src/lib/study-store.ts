@@ -63,6 +63,8 @@ export type Settings = {
   lessonsView: "important" | "all";
   showQuickLinks: boolean;
   timerDisplay: TimerDisplay;
+  spotifyUrl: string | null;
+  showSpotify: boolean;
 };
 
 export const DEFAULT_COLUMNS: Column[] = [
