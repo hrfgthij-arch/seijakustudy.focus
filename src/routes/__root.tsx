@@ -132,6 +132,7 @@ function NavBar() {
         <Link to="/progress" className="text-muted-foreground hover:text-primary" activeProps={{ className: "text-primary" }}>Progress</Link>
         <Link to="/todo" className="text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>To-do</Link>
         <Link to="/links" className="text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>Links</Link>
+        <Link to="/sleep" className="text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>Sleep</Link>
       </div>
       <div className="flex items-center gap-2 text-xs">
         {email ? (
