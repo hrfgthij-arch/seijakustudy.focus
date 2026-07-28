@@ -431,6 +431,15 @@ function Index() {
           </aside>
 
           <div className="space-y-6">
+            {settings.showSpotify && (
+              <div className="hidden md:block">
+                <SpotifyPlayer
+                  url={settings.spotifyUrl}
+                  onChange={(v) => setSettings({ ...settings, spotifyUrl: v })}
+                  onHide={() => setSettings({ ...settings, showSpotify: false })}
+                />
+              </div>
+            )}
             {settings.showQuickLinks && (
               <div className="hidden md:block">
                 <QuickLinksTable
