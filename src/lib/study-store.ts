@@ -63,6 +63,8 @@ export type Settings = {
   lessonsView: "important" | "all";
   showQuickLinks: boolean;
   timerDisplay: TimerDisplay;
+  spotifyUrl: string | null;
+  showSpotify: boolean;
 };
 
 export const DEFAULT_COLUMNS: Column[] = [
@@ -100,6 +102,8 @@ export const DEFAULT_SETTINGS: Settings = {
   lessonsView: "important",
   showQuickLinks: true,
   timerDisplay: DEFAULT_TIMER_DISPLAY,
+  spotifyUrl: null,
+  showSpotify: true,
 };
 
 export const DEFAULT_HABITS: Habit[] = [
@@ -322,36 +326,55 @@ export function useStudyStore() {
   useEffect(() => {
     if (!isHydrated) return;
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let syncedUserId: string | null = null;
 
     async function handleUser(uid: string | null) {
+      // Ignore repeated auth events for the same already-synced user
+      // (INITIAL_SESSION, TOKEN_REFRESHED, etc.) — otherwise the merge banner
+      // would re-appear on every token refresh.
+      if (uid && uid === syncedUserId) {
+        currentUserRef.current = uid;
+        setUserId(uid);
+        return;
+      }
       currentUserRef.current = uid;
       setUserId(uid);
       if (channel) {
         supabase.removeChannel(channel);
         channel = null;
       }
-      if (!uid) return;
+      if (!uid) {
+        syncedUserId = null;
+        return;
+      }
 
       const localSnapshot = sharedState ?? emptyState();
       const { data: remote } = await fetchRemote(uid);
 
       if (!remote) {
-        // First time this user syncs — push local
         suppressPush.current = true;
         setSharedState(localSnapshot);
         suppressPush.current = false;
         await pushRemote(uid, localSnapshot);
       } else if (hasMeaningfulData(localSnapshot) && hasMeaningfulData(remote)) {
-        // Both have data — stash guest snapshot for user to decide merge
-        try {
-          window.localStorage.setItem(GUEST_SNAPSHOT_KEY, JSON.stringify(localSnapshot));
-        } catch {}
-        setGuestSnapshot(localSnapshot);
+        // Only offer merge if a guest snapshot hasn't already been resolved.
+        const alreadyResolved = (() => {
+          try {
+            return window.localStorage.getItem(GUEST_SNAPSHOT_KEY) === null && !guestSnapshot;
+          } catch {
+            return false;
+          }
+        })();
+        if (!alreadyResolved) {
+          try {
+            window.localStorage.setItem(GUEST_SNAPSHOT_KEY, JSON.stringify(localSnapshot));
+          } catch {}
+          setGuestSnapshot(localSnapshot);
+        }
         suppressPush.current = true;
         setSharedState(remote);
         suppressPush.current = false;
       } else {
-        // Adopt whichever has data
         const chosen = hasMeaningfulData(remote) ? remote : localSnapshot;
         suppressPush.current = true;
         setSharedState(chosen);
@@ -359,8 +382,8 @@ export function useStudyStore() {
         if (!hasMeaningfulData(remote)) await pushRemote(uid, chosen);
       }
 
-      // Realtime subscription — skip echoes of our own recent writes so we don't
-      // yank characters out of an input mid-typing.
+      syncedUserId = uid;
+
       channel = supabase
         .channel(`study-state-${uid}`)
         .on(

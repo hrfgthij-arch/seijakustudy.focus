@@ -18,6 +18,7 @@ import { BannerUploader } from "@/components/BannerUploader";
 import { PdfWidget } from "@/components/PdfWidget";
 import { PriorityManager } from "@/components/PriorityManager";
 import { SleepTracker } from "@/components/SleepTracker";
+import { SpotifyPlayer } from "@/components/SpotifyPlayer";
 import {
   STATUS_META,
   subjectStats,
@@ -298,6 +299,12 @@ function Index() {
               >
                 🔗 Links
               </Link>
+              <Link
+                to="/sleep"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary md:hidden"
+              >
+                🌙 Sleep
+              </Link>
               {!userId && (
                 <Link
                   to="/auth"
@@ -319,16 +326,6 @@ function Index() {
               >
                 <StudyTimer />
               </ResizableBox>
-              {settings.showSleep && (
-                <div className="w-full md:w-[360px]">
-                  <SleepTracker
-                    entries={sleep}
-                    onChange={setSleep}
-                    onHide={() => setSettings({ ...settings, showSleep: false })}
-                    weekStart={settings.weekStart}
-                  />
-                </div>
-              )}
             </div>
             <div className="flex flex-wrap gap-2">
               <SummaryChip label="Total" value={counts.all} tone="neutral" />
@@ -421,9 +418,28 @@ function Index() {
             <div className="mt-4">
               <TodoList compact />
             </div>
+            {settings.showSleep && (
+              <div className="mt-4">
+                <SleepTracker
+                  entries={sleep}
+                  onChange={setSleep}
+                  onHide={() => setSettings({ ...settings, showSleep: false })}
+                  weekStart={settings.weekStart}
+                />
+              </div>
+            )}
           </aside>
 
           <div className="space-y-6">
+            {settings.showSpotify && (
+              <div className="hidden md:block">
+                <SpotifyPlayer
+                  url={settings.spotifyUrl}
+                  onChange={(v) => setSettings({ ...settings, spotifyUrl: v })}
+                  onHide={() => setSettings({ ...settings, showSpotify: false })}
+                />
+              </div>
+            )}
             {settings.showQuickLinks && (
               <div className="hidden md:block">
                 <QuickLinksTable
