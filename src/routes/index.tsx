@@ -18,6 +18,7 @@ import { BannerUploader } from "@/components/BannerUploader";
 import { PdfWidget } from "@/components/PdfWidget";
 import { PriorityManager } from "@/components/PriorityManager";
 import { SleepTracker } from "@/components/SleepTracker";
+import { SpotifyPlayer } from "@/components/SpotifyPlayer";
 import {
   STATUS_META,
   subjectStats,
