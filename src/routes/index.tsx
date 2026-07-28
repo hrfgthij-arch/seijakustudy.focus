@@ -411,6 +411,16 @@ function Index() {
             <div className="mt-4">
               <TodoList compact />
             </div>
+            {settings.showSleep && (
+              <div className="mt-4">
+                <SleepTracker
+                  entries={sleep}
+                  onChange={setSleep}
+                  onHide={() => setSettings({ ...settings, showSleep: false })}
+                  weekStart={settings.weekStart}
+                />
+              </div>
+            )}
           </aside>
 
           <div className="space-y-6">
