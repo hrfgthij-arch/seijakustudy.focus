@@ -270,30 +270,18 @@ function Index() {
               >
                 📊 View progress page
               </Link>
-              <button
-                onClick={() => setShowBanner((v) => !v)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
-              >
-                🖼️ Banner
-              </button>
-              <button
-                onClick={() => setSettings({ ...settings, showPdf: !settings.showPdf })}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
-              >
-                📎 {settings.showPdf ? "Hide" : "Embed"} PDF
-              </button>
-              <button
-                onClick={() => setSettings({ ...settings, showSleep: !settings.showSleep })}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
-              >
-                🌙 {settings.showSleep ? "Hide" : "Add"} sleep tracker
-              </button>
-              <button
-                onClick={() => setShowPriorityMgr((v) => !v)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
-              >
-                ⚡ Priorities
-              </button>
+              <WidgetsMenu
+                toggles={[
+                  { id: "banner", label: "Header banner", emoji: "🖼️", on: showBanner, onToggle: () => setShowBanner((v) => !v) },
+                  { id: "pdf", label: "PDF embed", emoji: "📎", on: settings.showPdf, onToggle: () => setSettings({ ...settings, showPdf: !settings.showPdf }) },
+                  { id: "sleep", label: "Sleep tracker", emoji: "🌙", on: settings.showSleep, onToggle: () => setSettings({ ...settings, showSleep: !settings.showSleep }) },
+                  { id: "spotify", label: "Spotify player", emoji: "🎧", on: settings.showSpotify, onToggle: () => setSettings({ ...settings, showSpotify: !settings.showSpotify }) },
+                  { id: "links", label: "Quick links", emoji: "🔗", on: settings.showQuickLinks, onToggle: () => setSettings({ ...settings, showQuickLinks: !settings.showQuickLinks }) },
+                  { id: "progress", label: "Subjects progress panel", emoji: "📊", on: settings.showProgressPanel, onToggle: () => setSettings({ ...settings, showProgressPanel: !settings.showProgressPanel }) },
+                  { id: "priorities", label: "Priority editor", emoji: "⚡", on: showPriorityMgr, onToggle: () => setShowPriorityMgr((v) => !v) },
+                ]}
+              />
+
               <Link
                 to="/planner"
                 className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
