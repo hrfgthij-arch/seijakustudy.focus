@@ -11,7 +11,7 @@ import stickerSkirk from "@/assets/sticker-skirk.png";
 import stickerNavia from "@/assets/sticker-navia.png";
 import { Calendar } from "@/components/ui/calendar";
 import { Donut } from "@/components/Donut";
-import { ClockWidget, MobileStickyTimer, StudyTimer } from "@/components/StudyTimer";
+import { ClockWidget, StickyTimerBar, StudyTimer } from "@/components/StudyTimer";
 import { QuickLinksTable } from "@/components/QuickLinksTable";
 import { ResizableBox } from "@/components/ResizableBox";
 import { BannerUploader } from "@/components/BannerUploader";
@@ -19,7 +19,10 @@ import { PdfWidget } from "@/components/PdfWidget";
 import { PriorityManager } from "@/components/PriorityManager";
 import { SleepTracker } from "@/components/SleepTracker";
 import { SpotifyPlayer } from "@/components/SpotifyPlayer";
+import { WidgetsMenu } from "@/components/WidgetsMenu";
+import { LessonListMobile } from "@/components/LessonListMobile";
 import {
+  MAX_COLUMNS,
   STATUS_META,
   subjectStats,
   uid,
@@ -29,6 +32,7 @@ import {
   type Row,
   type Status,
 } from "@/lib/study-store";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
