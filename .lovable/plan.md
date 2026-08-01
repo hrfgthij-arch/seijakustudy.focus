@@ -1,60 +1,45 @@
-# Fix bugs and add requested features
+## What I'll build
 
-## Bugs to fix
+### 1. Self-study planner: editable time ranges + multi-subject cells
+- Add a "Time rows" editor above the weekly grid: add a row (time or range like `18:00–19:30`), edit a row's label inline, delete a row. Stored in `settings.timeRanges`, so it syncs.
+- Each cell holds multiple subjects: subjects render as removable chips, with a small `+` input to add another. Backed by the existing `PlannerSlot.subjects` array (the old single `subject` stays in sync for older data).
 
-### 1. "Plan your days…" tagline duplicates atop the Description column
-Cause: the header row and the lessons table both share the same responsive grid parent. When the viewport shrinks or a column is added the header block collapses into the same column track and stacks on top of the Description column.
-Fix in `src/routes/index.tsx`: move the tagline block out of the responsive grid into its own full-width `<div>` above the `grid lg:grid-cols-[240px_1fr]` wrapper, and give the tagline `col-span-full` fallback. No content change to the text itself.
+### 2. Pomodoro timer follows you while running
+- When the timer is running, it detaches into a compact, partially transparent pill pinned to the top of the viewport (below the nav) on both mobile and desktop, so it stays visible while scrolling. Click it to expand / open fullscreen. Replaces today's mobile-only sticky timer.
 
-### 2. Typing anywhere causes visible "glitch" (input flicker / caret jump)
-Cause: `useStudyStore` recreates a new `state` object on every keystroke, which pushes to every listener; each edit also runs the debounced cloud push. On slower devices this re-renders the whole page and steals focus. Two fixes:
-- Debounce cell writes locally: `DescriptionCell` and text-cell inputs keep a local `draft` and only call `setRows` on blur / Ctrl+Enter (already true for description — extend to every editable cell in `index.tsx`, `planner.tsx`, `todo.tsx`, `SleepTracker`).
-- Split shared state re-renders: give `useStudyStore` a `useSyncExternalStore` selector variant `useStudyStoreSlice(fn)` so components subscribe only to the slice they read. Callers that mutate use a stable `store.set*` returned from a ref, not a re-created closure.
+### 3. Right column layout
+Right column order becomes: **Spotify → Quick links → lessons table**; the **to-do list** and **sleep tracker** stay in the left sidebar (to-do above, sleep below it). Every widget keeps a Hide button.
 
-### 3. Description editor UX
-`DescriptionCell` becomes:
-- Hover → text turns into a translucent textbox (readonly) previewing the full text.
-- Click → same textbox becomes editable, autofocused, caret at end, shows everything entered (auto-grow with `field-sizing: content` fallback to rows).
-- Style: `bg-white/40 backdrop-blur border-white/60` when hovered, `bg-white/70` when focused.
+### 4. One "Widgets" dropdown for all show/hide toggles
+A single `⚙️ Widgets` button in the header opens a dropdown listing every optional block with a checkbox: Banner, PDF, Sleep tracker, Quick links, Spotify, Subject progress panel, Priorities editor. This is the one place to bring anything back after hiding it (the scattered "Show quick links" buttons get removed).
 
-## Feature changes
+### 5. Merge-data banner bugs
+- The banner will only be offered once per account, tracked by a persisted `merged:<userId>` marker in local storage, and cleared on merge **or** discard — so it never reappears after a choice.
+- It will also only appear when the guest snapshot actually differs from the cloud data (compares row/todo/planner/sleep IDs); identical data means no banner, which kills the "pops up for no reason" case.
 
-### 4. Self-Study Planner — multi-subject cells and custom time ranges
-- Change `PlannerSlot` in `study-store.ts` from one subject per `weekday|time` to `subjects: string[]` (array) plus keep `note`.
-- Add editable `timeRanges: string[]` on `settings` (default the current 06:00–20:00 hourly list). Settings UI in `planner.tsx`: add / remove / rename a range (e.g. `07:30–09:00`).
-- Cell UI: chip list with `+ subject` inline input; Enter appends, × removes.
+### 6. Lessons table: columns and due date
+- New columns append to the **right** of existing user columns as real columns — the `<colgroup>` will be generated per-column with fixed percentage widths so nothing overlaps the description column.
+- Hard cap of **8** user columns; the `+ Column` button disables with a hint at the cap.
+- New built-in **Due date** column (alongside the existing Date/Time/Priority/Status), stored as `row.dueDate`, with overdue dates highlighted.
 
-### 5. Pomodoro timer — sticky on mobile, translucent, full-screen mode
-- Wrap the existing `StudyTimer` in a new `MobileStickyTimer` that, on `<lg` widths and only while `running`, renders a `position: fixed; bottom: 12px; right: 12px` translucent card (`bg-white/55 backdrop-blur`) that persists across scroll. Hidden when not running.
-- All timer surfaces get `bg-white/70 backdrop-blur` (partially transparent).
-- Add a ⛶ fullscreen button on the timer. Clicking opens a new `TimerFullscreen` overlay (portal, `fixed inset-0 z-50`) that by default shows the giant clock + timer. A `⋮` menu in the corner opens a settings panel:
-  - Theme: Light / Dark
-  - Clock style: Digital / Flip clock / Minimal
-  - Show seconds: on/off
-  - Show date: on/off
-  - Show timer: on/off
-- Persist these in `settings.timerDisplay`.
+### 7. Mobile lessons view = collapsible list
+On phones, each lesson renders as one compact row (subject · status dot · priority · due date) with a chevron; tapping expands it to reveal all columns, date, time, priority, status and delete. Collapsed by default.
 
-### 6. Lessons — show only important by default
-- Add `settings.lessonsView: "important" | "all"` (default `important`).
-- "Important" = rows whose `priorityId` is `urgent` or `high`, OR status = `progress`. If none match, fall back to first 5.
-- Add a ⚙️ button on the lessons toolbar opening a small popover: toggle All/Important, plus a multi-select of which priorities count as important.
+### 8. Header shows a display name, not the email
+- Add `settings.displayName`. The nav shows the name if set, otherwise nothing.
+- The Widgets dropdown (and a small edit affordance next to the name) lets the user type/change their display name.
 
-### 7. Quick Links
-- New `quickLinks: { id, label, url, icon? }[]` on state.
-- Desktop: new `QuickLinksTable` component; render in the right column above the lessons table with a "Hide" toggle (`settings.showQuickLinks`, default true). Reveal via a small "Show quick links" button when hidden.
-- Mobile: add `src/routes/links.tsx` route + a "🔗 Links" chip in the header.
-- Table columns: Label · URL (click to open in new tab) · ✎ · 🗑. Add-row inline form at the bottom.
+### 9. Spotify widget accepts codes
+Input accepts and normalizes: full share URLs, `spotify:` URIs, a bare ID with a type picker, **and a pasted `<iframe …>` embed snippet** — the `src` is extracted and used. Invalid input shows a clear inline hint instead of an empty box.
 
-### 8. Sleep tracker — weekly table near clock
-- Replace `SleepTracker` box UI with a compact 7-row table (`Day | Sleep time | Wake time | Hours | Note`). Hours is auto-calculated from times (handles crossing midnight).
-- Move it into the header cluster next to `ClockWidget` / `StudyTimer` (same wrap container). Still gated by `settings.showSleep`.
-- Data model: extend `SleepEntry` with `sleepTime: string | null`, `wakeTime: string | null`. Existing `hours` remains derived/manual. Migration in `normalizeState`.
+### 10. Timer background customization
+Timer settings gain a background picker: a set of gradient/solid presets, a custom color, or an image URL, plus an opacity slider. Applies to the widget, the sticky pill and fullscreen mode; stored in `settings.timerDisplay.background`.
+
+### 11. Removed
+The left-sidebar progress/donut panel is dropped from the desktop home page (the `/progress` page keeps it). Its space goes to the to-do list and sleep tracker.
 
 ## Technical notes
-
-- Store version bump to v5 in `study-store.ts`; migrate v4 → v5 preserving all fields, defaulting new ones (`timeRanges`, `lessonsView`, `showQuickLinks`, `quickLinks`, `timerDisplay`, `PlannerSlot.subjects` from prior single `subject`).
-- New files: `src/components/QuickLinksTable.tsx`, `src/components/TimerFullscreen.tsx`, `src/components/MobileStickyTimer.tsx`, `src/routes/links.tsx`.
-- Edited files: `src/lib/study-store.ts`, `src/components/DescriptionCell.tsx`, `src/components/StudyTimer.tsx`, `src/components/SleepTracker.tsx`, `src/routes/index.tsx`, `src/routes/planner.tsx`, `src/routes/__root.tsx` (nav link for Links on mobile).
-- No backend/schema changes required — state is a JSON blob in `study_state.data`.
-- Verification: run build, then Playwright the preview at mobile + desktop viewports to confirm no duplicated tagline, no input flicker, sticky timer while running, fullscreen overlay opens, quick links table renders and hides, sleep table sits beside the clock.
+- `src/lib/study-store.ts`: bump to v6 — add `Row.dueDate`, `Settings.displayName`, `TimerDisplay.background`, `MAX_COLUMNS = 8`; rework merge gating with a per-user merged marker + snapshot diff.
+- New: `src/components/WidgetsMenu.tsx`, `src/components/StickyTimerBar.tsx`, `src/components/LessonListMobile.tsx`.
+- Edited: `src/routes/index.tsx` (layout, colgroup, due date, mobile list), `src/routes/planner.tsx` (time-range editor, multi-subject cells), `src/components/StudyTimer.tsx` + `TimerFullscreen.tsx` (background + sticky), `src/components/SpotifyPlayer.tsx` (code parsing), `src/routes/__root.tsx` (display name).
+- No database migration needed — everything lives in the existing synced JSON state, with normalization defaults so existing saved data keeps working.

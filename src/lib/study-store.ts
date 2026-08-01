@@ -12,8 +12,13 @@ export type Row = {
   status: Status;
   date: string | null;
   time: string | null;
+  dueDate: string | null;
   priorityId: string | null;
 };
+
+/** Maximum number of user-defined columns in the lessons table. */
+export const MAX_COLUMNS = 8;
+
 
 export type SleepEntry = {
   id: string;
@@ -43,21 +48,31 @@ export type WeekStart = "sunday" | "monday";
 
 export type QuickLink = { id: string; label: string; url: string; icon?: string };
 
+export type TimerBackground = {
+  /** "preset" uses a built-in gradient key, "color" a solid CSS color, "image" a URL. */
+  kind: "preset" | "color" | "image";
+  value: string;
+  opacity: number;
+};
+
 export type TimerDisplay = {
   theme: "light" | "dark";
   style: "digital" | "flip" | "minimal";
   showSeconds: boolean;
   showDate: boolean;
   showTimer: boolean;
+  background: TimerBackground;
 };
 
 export type Settings = {
   bannerImage: string | null;
   pdfUrl: string | null;
   pdfName: string | null;
+  displayName: string | null;
   timerSize: { w: number; h: number };
   showSleep: boolean;
   showPdf: boolean;
+  showProgressPanel: boolean;
   weekStart: WeekStart;
   timeRanges: string[];
   lessonsView: "important" | "all";
@@ -66,6 +81,7 @@ export type Settings = {
   spotifyUrl: string | null;
   showSpotify: boolean;
 };
+
 
 export const DEFAULT_COLUMNS: Column[] = [
   { id: "subject", label: "Subject", emoji: "📘" },
@@ -82,21 +98,35 @@ export const DEFAULT_PRIORITIES: Priority[] = [
 
 export const DEFAULT_TIME_RANGES: string[] = Array.from({ length: 15 }, (_, i) => `${String(6 + i).padStart(2, "0")}:00`);
 
+export const TIMER_BG_PRESETS: { id: string; label: string; css: string; dark: boolean }[] = [
+  { id: "sky", label: "Sky", css: "linear-gradient(135deg, oklch(0.94 0.05 240), oklch(0.88 0.08 260))", dark: false },
+  { id: "sakura", label: "Sakura", css: "linear-gradient(135deg, oklch(0.95 0.04 350), oklch(0.9 0.07 320))", dark: false },
+  { id: "mint", label: "Mint", css: "linear-gradient(135deg, oklch(0.95 0.05 170), oklch(0.9 0.07 200))", dark: false },
+  { id: "sunset", label: "Sunset", css: "linear-gradient(135deg, oklch(0.9 0.09 60), oklch(0.86 0.11 25))", dark: false },
+  { id: "midnight", label: "Midnight", css: "linear-gradient(135deg, oklch(0.28 0.07 265), oklch(0.16 0.05 260))", dark: true },
+  { id: "plain", label: "Plain", css: "oklch(1 0 0)", dark: false },
+];
+
+export const DEFAULT_TIMER_BACKGROUND: TimerBackground = { kind: "preset", value: "sky", opacity: 0.6 };
+
 export const DEFAULT_TIMER_DISPLAY: TimerDisplay = {
   theme: "light",
   style: "digital",
   showSeconds: false,
   showDate: true,
   showTimer: true,
+  background: DEFAULT_TIMER_BACKGROUND,
 };
 
 export const DEFAULT_SETTINGS: Settings = {
   bannerImage: null,
   pdfUrl: null,
   pdfName: null,
+  displayName: null,
   timerSize: { w: 340, h: 130 },
   showSleep: false,
   showPdf: false,
+  showProgressPanel: false,
   weekStart: "sunday",
   timeRanges: DEFAULT_TIME_RANGES,
   lessonsView: "important",
@@ -105,6 +135,18 @@ export const DEFAULT_SETTINGS: Settings = {
   spotifyUrl: null,
   showSpotify: true,
 };
+
+/** Resolve a timer background into inline style props. */
+export function timerBackgroundStyle(bg?: TimerBackground): React.CSSProperties {
+  const b = bg ?? DEFAULT_TIMER_BACKGROUND;
+  if (b.kind === "image" && b.value) {
+    return { backgroundImage: `url(${b.value})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 1 };
+  }
+  if (b.kind === "color") return { background: b.value || "white" };
+  const preset = TIMER_BG_PRESETS.find((p) => p.id === b.value) ?? TIMER_BG_PRESETS[0];
+  return { background: preset.css };
+}
+
 
 export const DEFAULT_HABITS: Habit[] = [
   { id: "study", label: "Studied today", dates: [] },
@@ -175,9 +217,11 @@ function migrateRow(r: any): Row {
     status: r.status,
     date: r.date ?? null,
     time: r.time ?? null,
+    dueDate: r.dueDate ?? null,
     priorityId: r.priorityId ?? null,
   };
 }
+
 
 function migrateSlot(s: any): PlannerSlot {
   const subjects: string[] = Array.isArray(s?.subjects)
@@ -208,7 +252,15 @@ function normalizeState(parsed: any): State {
         Array.isArray(parsed?.settings?.timeRanges) && parsed.settings.timeRanges.length
           ? parsed.settings.timeRanges
           : base.settings.timeRanges,
-      timerDisplay: { ...base.settings.timerDisplay, ...(parsed?.settings?.timerDisplay ?? {}) },
+      timerDisplay: {
+        ...base.settings.timerDisplay,
+        ...(parsed?.settings?.timerDisplay ?? {}),
+        background: {
+          ...base.settings.timerDisplay.background,
+          ...(parsed?.settings?.timerDisplay?.background ?? {}),
+        },
+      },
+
     },
     sleep: parsed?.sleep ?? [],
     todos: parsed?.todos ?? [],
@@ -241,14 +293,53 @@ function saveLocal(state: State) {
 }
 
 const seedRows = (): Row[] => [
-  { id: uid(), values: { subject: "Math", lesson: "Integrals", description: "Practice u-substitution" }, status: "progress", date: null, time: null, priorityId: "high" },
-  { id: uid(), values: { subject: "Japanese", lesson: "N5 Kanji", description: "Review chapter 3" }, status: "todo", date: null, time: null, priorityId: "medium" },
-  { id: uid(), values: { subject: "History", lesson: "Edo Period", description: "Notes + timeline" }, status: "done", date: null, time: null, priorityId: "low" },
+  { id: uid(), values: { subject: "Math", lesson: "Integrals", description: "Practice u-substitution" }, status: "progress", date: null, time: null, dueDate: null, priorityId: "high" },
+  { id: uid(), values: { subject: "Japanese", lesson: "N5 Kanji", description: "Review chapter 3" }, status: "todo", date: null, time: null, dueDate: null, priorityId: "medium" },
+  { id: uid(), values: { subject: "History", lesson: "Edo Period", description: "Notes + timeline" }, status: "done", date: null, time: null, dueDate: null, priorityId: "low" },
 ];
+
 
 function hasMeaningfulData(s: State) {
   return s.rows.length > 0 || s.todos.length > 0 || s.plannerSlots.length > 0 || s.sleep.length > 0;
 }
+
+const MERGE_RESOLVED_KEY = "sakura-merge-resolved-v1";
+
+function isMergeResolved(uid: string) {
+  try {
+    const list = JSON.parse(window.localStorage.getItem(MERGE_RESOLVED_KEY) ?? "[]");
+    return Array.isArray(list) && list.includes(uid);
+  } catch {
+    return false;
+  }
+}
+
+function markMergeResolved(uid: string) {
+  try {
+    const list = JSON.parse(window.localStorage.getItem(MERGE_RESOLVED_KEY) ?? "[]");
+    const next = Array.isArray(list) ? list : [];
+    if (!next.includes(uid)) next.push(uid);
+    window.localStorage.setItem(MERGE_RESOLVED_KEY, JSON.stringify(next));
+  } catch {}
+}
+
+/** True when the local snapshot holds at least one item the cloud copy lacks. */
+function hasExtraData(local: State, remote: State) {
+  const ids = new Set<string>([
+    ...remote.rows.map((r) => r.id),
+    ...remote.todos.map((t) => t.id),
+    ...remote.plannerSlots.map((p) => p.id),
+    ...remote.sleep.map((s) => s.id),
+  ]);
+  const localIds = [
+    ...local.rows.map((r) => r.id),
+    ...local.todos.map((t) => t.id),
+    ...local.plannerSlots.map((p) => p.id),
+    ...local.sleep.map((s) => s.id),
+  ];
+  return localIds.some((id) => !ids.has(id));
+}
+
 
 // ---- Cloud sync ---- //
 
@@ -315,11 +406,9 @@ export function useStudyStore() {
     setSharedState(initial);
     setIsHydrated(true);
 
-    // Restore guest snapshot pending merge, if any
-    try {
-      const snapRaw = window.localStorage.getItem(GUEST_SNAPSHOT_KEY);
-      if (snapRaw) setGuestSnapshot(normalizeState(JSON.parse(snapRaw)));
-    } catch {}
+    // Guest snapshots are restored per-account inside handleUser, so a resolved
+    // merge never comes back.
+
   }, []);
 
   // Auth subscription — hook up cloud sync
@@ -357,23 +446,26 @@ export function useStudyStore() {
         suppressPush.current = false;
         await pushRemote(uid, localSnapshot);
       } else if (hasMeaningfulData(localSnapshot) && hasMeaningfulData(remote)) {
-        // Only offer merge if a guest snapshot hasn't already been resolved.
-        const alreadyResolved = (() => {
+        // Offer the merge only when: (a) this account never resolved a merge,
+        // and (b) the local data actually contains something the cloud lacks.
+        if (!isMergeResolved(uid) && hasExtraData(localSnapshot, remote)) {
           try {
-            return window.localStorage.getItem(GUEST_SNAPSHOT_KEY) === null && !guestSnapshot;
-          } catch {
-            return false;
-          }
-        })();
-        if (!alreadyResolved) {
-          try {
-            window.localStorage.setItem(GUEST_SNAPSHOT_KEY, JSON.stringify(localSnapshot));
+            window.localStorage.setItem(
+              GUEST_SNAPSHOT_KEY,
+              JSON.stringify({ userId: uid, state: localSnapshot }),
+            );
           } catch {}
           setGuestSnapshot(localSnapshot);
+        } else {
+          try {
+            window.localStorage.removeItem(GUEST_SNAPSHOT_KEY);
+          } catch {}
+          setGuestSnapshot(null);
         }
         suppressPush.current = true;
         setSharedState(remote);
         suppressPush.current = false;
+
       } else {
         const chosen = hasMeaningfulData(remote) ? remote : localSnapshot;
         suppressPush.current = true;
@@ -467,6 +559,7 @@ export function useStudyStore() {
       sleep: [...cur.sleep, ...guestSnapshot.sleep.filter((s) => !sleepIds.has(s.id))],
     };
     setSharedState(merged);
+    if (currentUserRef.current) markMergeResolved(currentUserRef.current);
     try {
       window.localStorage.removeItem(GUEST_SNAPSHOT_KEY);
     } catch {}
@@ -474,11 +567,13 @@ export function useStudyStore() {
   }, [guestSnapshot]);
 
   const discardGuestSnapshot = useCallback(() => {
+    if (currentUserRef.current) markMergeResolved(currentUserRef.current);
     try {
       window.localStorage.removeItem(GUEST_SNAPSHOT_KEY);
     } catch {}
     setGuestSnapshot(null);
   }, []);
+
 
   return {
     ...state,

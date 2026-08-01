@@ -1,6 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { TimerFullscreen } from "./TimerFullscreen";
-import { DEFAULT_TIMER_DISPLAY, useStudyStore, type TimerDisplay } from "@/lib/study-store";
+import {
+  DEFAULT_TIMER_DISPLAY,
+  timerBackgroundStyle,
+  useStudyStore,
+  type TimerDisplay,
+} from "@/lib/study-store";
+
 
 const PRESETS = [15, 25, 45];
 
@@ -80,6 +86,20 @@ export function MobileStickyTimer() {
   );
 }
 
+/** Sticky pill that rides along the top of the page whenever the timer runs. */
+export function StickyTimerBar() {
+  const { running } = useSharedTimer();
+  if (!running) return null;
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-2 z-40 flex justify-center px-3">
+      <div className="pointer-events-auto">
+        <TimerCard variant="sticky" />
+      </div>
+    </div>
+  );
+}
+
+
 function TimerCard({ variant }: { variant: "full" | "sticky" }) {
   const { settings, setSettings } = useStudyStore();
   const display = settings.timerDisplay ?? DEFAULT_TIMER_DISPLAY;
@@ -149,7 +169,13 @@ function TimerCard({ variant }: { variant: "full" | "sticky" }) {
   }
 
   return (
-    <div className="flex h-full w-full flex-col justify-between rounded-2xl border border-[color:var(--border)] bg-white/60 p-3 shadow-[var(--shadow-cute)] backdrop-blur">
+    <div className="relative flex h-full w-full flex-col justify-between overflow-hidden rounded-2xl border border-[color:var(--border)] p-3 shadow-[var(--shadow-cute)] backdrop-blur">
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10"
+        style={{ ...timerBackgroundStyle(display.background), opacity: display.background?.opacity ?? 0.6 }}
+      />
+
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg">
           ⏱️

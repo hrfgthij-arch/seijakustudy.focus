@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import type { TimerDisplay } from "@/lib/study-store";
+import {
+  DEFAULT_TIMER_BACKGROUND,
+  TIMER_BG_PRESETS,
+  timerBackgroundStyle,
+  type TimerDisplay,
+} from "@/lib/study-store";
+
 
 type Props = {
   open: boolean;
@@ -68,14 +74,23 @@ export function TimerFullscreen({
     setCustomMin("");
   }
 
+  const bg = display.background ?? DEFAULT_TIMER_BACKGROUND;
+
   return createPortal(
     <div
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-center transition-colors ${
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden transition-colors ${
         dark
           ? "bg-[radial-gradient(ellipse_at_top,oklch(0.24_0.06_260),oklch(0.14_0.04_260))] text-white"
           : "bg-[radial-gradient(ellipse_at_top,oklch(0.98_0.02_255),oklch(0.94_0.04_255))] text-foreground"
       }`}
     >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{ ...timerBackgroundStyle(bg), opacity: bg.opacity }}
+      />
+      <div className="relative flex w-full flex-1 flex-col items-center justify-center">
+
       <div className="absolute right-4 top-4 flex items-center gap-2">
         <div className="relative">
           <button
@@ -144,7 +159,57 @@ export function TimerFullscreen({
                   onChange={(e) => onChange({ ...display, showTimer: e.target.checked })}
                 />
               </label>
+
+              <div className={`mt-2 border-t pt-2 ${dark ? "border-white/15" : "border-[color:var(--border)]"}`}>
+                <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider opacity-70">
+                  Background
+                </div>
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {TIMER_BG_PRESETS.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => onChange({ ...display, background: { ...bg, kind: "preset", value: p.id } })}
+                      title={p.label}
+                      className={`h-6 w-6 rounded-full border ${
+                        bg.kind === "preset" && bg.value === p.id ? "ring-2 ring-primary" : ""
+                      } ${dark ? "border-white/25" : "border-[color:var(--border)]"}`}
+                      style={{ background: p.css }}
+                    />
+                  ))}
+                </div>
+                <label className="mb-2 flex items-center justify-between gap-2">
+                  <span className="text-xs">Custom colour</span>
+                  <input
+                    type="color"
+                    value={bg.kind === "color" ? bg.value : "#dbeafe"}
+                    onChange={(e) => onChange({ ...display, background: { ...bg, kind: "color", value: e.target.value } })}
+                    className="h-6 w-10 cursor-pointer rounded border border-[color:var(--border)] bg-transparent"
+                  />
+                </label>
+                <input
+                  value={bg.kind === "image" ? bg.value : ""}
+                  onChange={(e) =>
+                    onChange({ ...display, background: { ...bg, kind: e.target.value ? "image" : "preset", value: e.target.value || "sky" } })
+                  }
+                  placeholder="Image URL…"
+                  className={`mb-2 w-full rounded border px-2 py-1 text-xs outline-none ${
+                    dark ? "border-white/25 bg-transparent placeholder:text-white/50" : "border-[color:var(--border)] bg-white"
+                  }`}
+                />
+                <label className="flex items-center justify-between gap-2">
+                  <span className="text-xs">Opacity</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={Math.round(bg.opacity * 100)}
+                    onChange={(e) => onChange({ ...display, background: { ...bg, opacity: Number(e.target.value) / 100 } })}
+                    className="w-28"
+                  />
+                </label>
+              </div>
             </div>
+
           )}
         </div>
         <button
@@ -235,7 +300,9 @@ export function TimerFullscreen({
           </div>
         )}
       </div>
+      </div>
     </div>,
+
     document.body,
   );
 }

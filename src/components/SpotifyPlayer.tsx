@@ -13,8 +13,11 @@ type Props = {
  */
 function toEmbedUrl(raw: string | null): string | null {
   if (!raw) return null;
-  const trimmed = raw.trim();
+  let trimmed = raw.trim();
   if (!trimmed) return null;
+  // Full <iframe …> embed code pasted from Spotify's "Copy embed code"
+  const iframeSrc = trimmed.match(/<iframe[^>]*\ssrc=["']([^"']+)["']/i);
+  if (iframeSrc) trimmed = iframeSrc[1];
   // Already an embed URL
   if (trimmed.includes("open.spotify.com/embed/")) return trimmed;
   // spotify:track:xxx URI
@@ -23,8 +26,14 @@ function toEmbedUrl(raw: string | null): string | null {
   // https URL: extract /{kind}/{id}
   const m = trimmed.match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|album|playlist|episode|show|artist)\/([a-zA-Z0-9]+)/);
   if (m) return `https://open.spotify.com/embed/${m[1]}/${m[2]}?utm_source=generator`;
+  // Bare "playlist 37i9..." or "kind/id" shorthand
+  const kind = trimmed.match(/^(track|album|playlist|episode|show|artist)[\s/:]+([a-zA-Z0-9]{16,})/i);
+  if (kind) return `https://open.spotify.com/embed/${kind[1].toLowerCase()}/${kind[2]}`;
+  // Bare 22-char Spotify ID — assume a playlist
+  if (/^[a-zA-Z0-9]{22}$/.test(trimmed)) return `https://open.spotify.com/embed/playlist/${trimmed}`;
   return null;
 }
+
 
 export function SpotifyPlayer({ url, onChange, onHide }: Props) {
   const [draft, setDraft] = useState(url ?? "");
@@ -46,12 +55,14 @@ export function SpotifyPlayer({ url, onChange, onHide }: Props) {
       </div>
       <div className="p-3">
         <div className="mb-2 flex gap-2">
-          <input
+          <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Paste a Spotify playlist / album / track link…"
-            className="min-w-0 flex-1 rounded-md border border-[color:var(--border)] bg-white px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+            rows={1}
+            placeholder="Paste a Spotify link, URI or <iframe> embed code…"
+            className="min-w-0 flex-1 resize-none rounded-md border border-[color:var(--border)] bg-white px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
           />
+
           <button
             onClick={() => onChange(draft.trim() || null)}
             className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"

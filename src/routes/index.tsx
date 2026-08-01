@@ -11,7 +11,7 @@ import stickerSkirk from "@/assets/sticker-skirk.png";
 import stickerNavia from "@/assets/sticker-navia.png";
 import { Calendar } from "@/components/ui/calendar";
 import { Donut } from "@/components/Donut";
-import { ClockWidget, MobileStickyTimer, StudyTimer } from "@/components/StudyTimer";
+import { ClockWidget, StickyTimerBar, StudyTimer } from "@/components/StudyTimer";
 import { QuickLinksTable } from "@/components/QuickLinksTable";
 import { ResizableBox } from "@/components/ResizableBox";
 import { BannerUploader } from "@/components/BannerUploader";
@@ -19,7 +19,10 @@ import { PdfWidget } from "@/components/PdfWidget";
 import { PriorityManager } from "@/components/PriorityManager";
 import { SleepTracker } from "@/components/SleepTracker";
 import { SpotifyPlayer } from "@/components/SpotifyPlayer";
+import { WidgetsMenu } from "@/components/WidgetsMenu";
+import { LessonListMobile } from "@/components/LessonListMobile";
 import {
+  MAX_COLUMNS,
   STATUS_META,
   subjectStats,
   uid,
@@ -29,6 +32,7 @@ import {
   type Row,
   type Status,
 } from "@/lib/study-store";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -155,9 +159,10 @@ function Index() {
       {
         id: uid(),
         values,
-        status: "todo",
+        status: "todo" as Status,
         date: selectedDay ? toISO(selectedDay) : null,
         time: null,
+        dueDate: null,
         priorityId: null,
       },
     ]);
@@ -168,6 +173,9 @@ function Index() {
   }
   function updateDate(rowId: string, iso: string | null) {
     setRows((r) => r.map((row) => (row.id === rowId ? { ...row, date: iso } : row)));
+  }
+  function updateDueDate(rowId: string, iso: string | null) {
+    setRows((r) => r.map((row) => (row.id === rowId ? { ...row, dueDate: iso } : row)));
   }
   function updateTime(rowId: string, t: string | null) {
     setRows((r) => r.map((row) => (row.id === rowId ? { ...row, time: t } : row)));
@@ -184,6 +192,10 @@ function Index() {
   }
 
   function addColumn() {
+    if (columns.length >= MAX_COLUMNS) {
+      window.alert(`You can have up to ${MAX_COLUMNS} columns.`);
+      return;
+    }
     const label = window.prompt("New column name?");
     if (!label) return;
     const emoji = window.prompt("An emoji for this column? (optional)", "🔹") || "🔹";
@@ -191,6 +203,7 @@ function Index() {
     setColumns((c: Column[]) => [...c, { id, label, emoji }]);
     setRows((rs) => rs.map((r) => ({ ...r, values: { ...r.values, [id]: "" } })));
   }
+
   function renameColumn(colId: string) {
     const col = columns.find((c) => c.id === colId);
     if (!col) return;
@@ -257,30 +270,18 @@ function Index() {
               >
                 📊 View progress page
               </Link>
-              <button
-                onClick={() => setShowBanner((v) => !v)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
-              >
-                🖼️ Banner
-              </button>
-              <button
-                onClick={() => setSettings({ ...settings, showPdf: !settings.showPdf })}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
-              >
-                📎 {settings.showPdf ? "Hide" : "Embed"} PDF
-              </button>
-              <button
-                onClick={() => setSettings({ ...settings, showSleep: !settings.showSleep })}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
-              >
-                🌙 {settings.showSleep ? "Hide" : "Add"} sleep tracker
-              </button>
-              <button
-                onClick={() => setShowPriorityMgr((v) => !v)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
-              >
-                ⚡ Priorities
-              </button>
+              <WidgetsMenu
+                toggles={[
+                  { id: "banner", label: "Header banner", emoji: "🖼️", on: showBanner, onToggle: () => setShowBanner((v) => !v) },
+                  { id: "pdf", label: "PDF embed", emoji: "📎", on: settings.showPdf, onToggle: () => setSettings({ ...settings, showPdf: !settings.showPdf }) },
+                  { id: "sleep", label: "Sleep tracker", emoji: "🌙", on: settings.showSleep, onToggle: () => setSettings({ ...settings, showSleep: !settings.showSleep }) },
+                  { id: "spotify", label: "Spotify player", emoji: "🎧", on: settings.showSpotify, onToggle: () => setSettings({ ...settings, showSpotify: !settings.showSpotify }) },
+                  { id: "links", label: "Quick links", emoji: "🔗", on: settings.showQuickLinks, onToggle: () => setSettings({ ...settings, showQuickLinks: !settings.showQuickLinks }) },
+                  { id: "progress", label: "Subjects progress panel", emoji: "📊", on: settings.showProgressPanel, onToggle: () => setSettings({ ...settings, showProgressPanel: !settings.showProgressPanel }) },
+                  { id: "priorities", label: "Priority editor", emoji: "⚡", on: showPriorityMgr, onToggle: () => setShowPriorityMgr((v) => !v) },
+                ]}
+              />
+
               <Link
                 to="/planner"
                 className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
@@ -387,68 +388,8 @@ function Index() {
           ))}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-          <aside className="hidden lg:block">
-            <div className="sticky top-6 space-y-4 rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 shadow-[var(--shadow-cute)] backdrop-blur">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold text-foreground">Subjects</h2>
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Overall {overallPct}%
-                </span>
-              </div>
-              <div className="flex justify-center border-b border-[color:var(--border)] pb-4">
-                <Donut pct={overallPct} size={104} stroke={10} label="All lessons" sublabel={`${counts.done}/${counts.all} done`} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {stats.length === 0 && (
-                  <p className="col-span-2 text-center text-xs text-muted-foreground">Add lessons to see progress here.</p>
-                )}
-                {stats.map((s) => (
-                  <Donut
-                    key={s.subject}
-                    pct={s.pct}
-                    size={64}
-                    stroke={7}
-                    label={s.subject}
-                    sublabel={`${s.done}/${s.total}`}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="mt-4">
-              <TodoList compact />
-            </div>
-            {settings.showSleep && (
-              <div className="mt-4">
-                <SleepTracker
-                  entries={sleep}
-                  onChange={setSleep}
-                  onHide={() => setSettings({ ...settings, showSleep: false })}
-                  weekStart={settings.weekStart}
-                />
-              </div>
-            )}
-          </aside>
-
-          <div className="space-y-6">
-            {settings.showSpotify && (
-              <div className="hidden md:block">
-                <SpotifyPlayer
-                  url={settings.spotifyUrl}
-                  onChange={(v) => setSettings({ ...settings, spotifyUrl: v })}
-                  onHide={() => setSettings({ ...settings, showSpotify: false })}
-                />
-              </div>
-            )}
-            {settings.showQuickLinks && (
-              <div className="hidden md:block">
-                <QuickLinksTable
-                  links={quickLinks}
-                  onChange={setQuickLinks}
-                  onHide={() => setSettings({ ...settings, showQuickLinks: false })}
-                />
-              </div>
-            )}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="min-w-0 space-y-6">
             <section className="rounded-2xl border border-[color:var(--border)] bg-white/90 shadow-[var(--shadow-cute)] backdrop-blur">
               <div className="flex flex-col gap-3 border-b border-[color:var(--border)] px-4 py-3 md:px-5">
                 <div className="flex flex-wrap items-center gap-2">
@@ -532,23 +473,14 @@ function Index() {
 
               {/* Desktop table */}
               <div className="hidden overflow-x-auto md:block">
-                <table className="w-full border-collapse text-left text-sm" style={{ tableLayout: "fixed" }}>
-                  <colgroup>
-                    {columns.map((c, i) => {
-                      const isFirst = i === 0;
-                      const isDescription = c.id === "description" || i === columns.length - 1;
-                      return <col key={c.id} style={{ width: isFirst ? "14%" : isDescription ? "auto" : "16%" }} />;
-                    })}
-                    <col style={{ width: "130px" }} />
-                    <col style={{ width: "90px" }} />
-                    <col style={{ width: "120px" }} />
-                    <col style={{ width: "140px" }} />
-                    <col style={{ width: "44px" }} />
-                  </colgroup>
+                <table
+                  className="w-full border-collapse text-left text-sm"
+                  style={{ minWidth: 760 + columns.length * 90 }}
+                >
                   <thead>
                     <tr className="border-b border-[color:var(--border)] bg-[color:var(--muted)]/60 text-[11px] uppercase tracking-wider text-muted-foreground">
                       {columns.map((c) => (
-                        <th key={c.id} className="group px-4 py-3 font-semibold">
+                        <th key={c.id} className="group whitespace-nowrap px-4 py-3 font-semibold">
                           <span className="mr-1.5">{c.emoji}</span>
                           <button className="hover:text-primary" onClick={() => renameColumn(c.id)}>
                             {c.label}
@@ -565,13 +497,15 @@ function Index() {
                           )}
                         </th>
                       ))}
-                      <th className="px-4 py-3 font-semibold">📅 Date</th>
-                      <th className="px-2 py-3 font-semibold">🕒 Time</th>
-                      <th className="px-2 py-3 font-semibold">⚡ Priority</th>
-                      <th className="px-4 py-3 font-semibold">Status</th>
-                      <th className="px-2 py-3"></th>
+                      <th className="w-[130px] whitespace-nowrap px-4 py-3 font-semibold">📅 Date</th>
+                      <th className="w-[130px] whitespace-nowrap px-2 py-3 font-semibold">⏳ Due date</th>
+                      <th className="w-[92px] whitespace-nowrap px-2 py-3 font-semibold">🕒 Time</th>
+                      <th className="w-[120px] whitespace-nowrap px-2 py-3 font-semibold">⚡ Priority</th>
+                      <th className="w-[140px] whitespace-nowrap px-4 py-3 font-semibold">Status</th>
+                      <th className="w-[44px] px-2 py-3"></th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {visibleRows.map((row, idx) => {
                       const p = row.priorityId ? priorityMap.get(row.priorityId) : null;
@@ -613,6 +547,15 @@ function Index() {
                               className="w-full rounded-md border border-transparent bg-transparent px-2 py-2 text-xs text-foreground outline-none focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
                             />
                           </td>
+                          <td className="px-2 py-2 align-top">
+                            <input
+                              type="date"
+                              value={row.dueDate ?? ""}
+                              onChange={(e) => updateDueDate(row.id, e.target.value || null)}
+                              className="w-full rounded-md border border-transparent bg-transparent px-2 py-2 text-xs text-foreground outline-none focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
+                            />
+                          </td>
+
                           <td className="px-2 py-2 align-top">
                             <input
                               type="time"
@@ -677,100 +620,19 @@ function Index() {
                 </table>
               </div>
 
-              {/* Mobile cards */}
-              <div className="grid gap-3 p-3 md:hidden">
-                {visibleRows.map((row) => {
-                  const subject = row.values[columns[0]?.id] || "Untitled";
-                  const p = row.priorityId ? priorityMap.get(row.priorityId) : null;
-                  return (
-                    <article key={row.id} className="rounded-xl border border-[color:var(--border)] bg-white p-3.5 shadow-sm">
-                      <div className="mb-2.5 flex items-center justify-between gap-2">
-                        <h3 className="truncate text-sm font-semibold text-foreground">{subject}</h3>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => cycleStatus(row.id)}
-                            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${STATUS_META[row.status].className}`}
-                          >
-                            <span>{STATUS_META[row.status].icon}</span>
-                            {STATUS_META[row.status].label}
-                          </button>
-                          <button
-                            onClick={() => deleteRow(row.id)}
-                            className="rounded-md p-1 text-muted-foreground hover:text-destructive"
-                            aria-label="Delete"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        {columns.map((c, i) => (
-                          <label key={c.id} className="block">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                              {c.emoji} {c.label}
-                            </span>
-                            {c.id === "description" ? (
-                              <div className="mt-0.5 rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2">
-                                <DescriptionCell
-                                  value={row.values[c.id] ?? ""}
-                                  onChange={(v) => updateCell(row.id, c.id, v)}
-                                  placeholder={`Add ${c.label.toLowerCase()}…`}
-                                />
-                              </div>
-                            ) : (
-                              <input
-                                value={row.values[c.id] ?? ""}
-                                onChange={(e) => updateCell(row.id, c.id, e.target.value)}
-                                placeholder={i === 0 ? "Subject name" : `Add ${c.label.toLowerCase()}…`}
-                                className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/25"
-                              />
-                            )}
-                          </label>
-                        ))}
-                        <div className="grid grid-cols-2 gap-2">
-                          <label className="block">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📅 Date</span>
-                            <input
-                              type="date"
-                              value={row.date ?? ""}
-                              onChange={(e) => updateDate(row.id, e.target.value || null)}
-                              className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                            />
-                          </label>
-                          <label className="block">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">🕒 Time</span>
-                            <input
-                              type="time"
-                              value={row.time ?? ""}
-                              onChange={(e) => updateTime(row.id, e.target.value || null)}
-                              className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                            />
-                          </label>
-                        </div>
-                        <label className="block">
-                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">⚡ Priority</span>
-                          <select
-                            value={row.priorityId ?? ""}
-                            onChange={(e) => updatePriority(row.id, e.target.value || null)}
-                            className="mt-0.5 w-full rounded-md border bg-white px-2.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                            style={{ borderColor: p ? p.color : "var(--border)", color: p ? p.color : undefined }}
-                          >
-                            <option value="">—</option>
-                            {priorities.map((pr) => (
-                              <option key={pr.id} value={pr.id}>{pr.label}</option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                    </article>
-                  );
-                })}
-                {visibleRows.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-[color:var(--border)] p-8 text-center text-sm text-muted-foreground">
-                    No lessons here yet — add one to start your study log.
-                  </div>
-                )}
-              </div>
+              <LessonListMobile
+                rows={visibleRows}
+                columns={columns}
+                priorities={priorities}
+                priorityMap={priorityMap}
+                updateCell={updateCell}
+                updateDate={updateDate}
+                updateDueDate={updateDueDate}
+                updateTime={updateTime}
+                updatePriority={updatePriority}
+                cycleStatus={cycleStatus}
+                deleteRow={deleteRow}
+              />
             </section>
 
             {/* PDF widget (opt-in) */}
@@ -857,13 +719,66 @@ function Index() {
               </div>
             </section>
           </div>
+
+          <aside className="min-w-0 space-y-4">
+            {settings.showSpotify && (
+              <SpotifyPlayer
+                url={settings.spotifyUrl}
+                onChange={(v) => setSettings({ ...settings, spotifyUrl: v })}
+                onHide={() => setSettings({ ...settings, showSpotify: false })}
+              />
+            )}
+            <div className="hidden lg:block">
+              <TodoList compact />
+            </div>
+            {settings.showQuickLinks && (
+              <div className="hidden md:block">
+                <QuickLinksTable
+                  links={quickLinks}
+                  onChange={setQuickLinks}
+                  onHide={() => setSettings({ ...settings, showQuickLinks: false })}
+                />
+              </div>
+            )}
+            {settings.showSleep && (
+              <div className="hidden lg:block">
+                <SleepTracker
+                  entries={sleep}
+                  onChange={setSleep}
+                  onHide={() => setSettings({ ...settings, showSleep: false })}
+                  weekStart={settings.weekStart}
+                />
+              </div>
+            )}
+            {settings.showProgressPanel && (
+              <div className="space-y-4 rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 shadow-[var(--shadow-cute)] backdrop-blur">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold text-foreground">Subjects</h2>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Overall {overallPct}%
+                  </span>
+                </div>
+                <div className="flex justify-center border-b border-[color:var(--border)] pb-4">
+                  <Donut pct={overallPct} size={104} stroke={10} label="All lessons" sublabel={`${counts.done}/${counts.all} done`} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {stats.length === 0 && (
+                    <p className="col-span-2 text-center text-xs text-muted-foreground">Add lessons to see progress here.</p>
+                  )}
+                  {stats.map((s) => (
+                    <Donut key={s.subject} pct={s.pct} size={64} stroke={7} label={s.subject} sublabel={`${s.done}/${s.total}`} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </aside>
         </div>
 
         <footer className="mt-6 text-center text-xs text-muted-foreground">
           Tap the status pill to cycle · Click a column header to rename · Drag the timer's corner to resize · Everything saves to your browser
         </footer>
       </div>
-      <MobileStickyTimer />
+      <StickyTimerBar />
     </main>
   );
 }
