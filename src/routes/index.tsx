@@ -798,6 +798,59 @@ function Index() {
               </div>
             </section>
           </div>
+
+          <aside className="min-w-0 space-y-4">
+            {settings.showSpotify && (
+              <SpotifyPlayer
+                url={settings.spotifyUrl}
+                onChange={(v) => setSettings({ ...settings, spotifyUrl: v })}
+                onHide={() => setSettings({ ...settings, showSpotify: false })}
+              />
+            )}
+            <div className="hidden lg:block">
+              <TodoList compact />
+            </div>
+            {settings.showQuickLinks && (
+              <div className="hidden md:block">
+                <QuickLinksTable
+                  links={quickLinks}
+                  onChange={setQuickLinks}
+                  onHide={() => setSettings({ ...settings, showQuickLinks: false })}
+                />
+              </div>
+            )}
+            {settings.showSleep && (
+              <div className="hidden lg:block">
+                <SleepTracker
+                  entries={sleep}
+                  onChange={setSleep}
+                  onHide={() => setSettings({ ...settings, showSleep: false })}
+                  weekStart={settings.weekStart}
+                />
+              </div>
+            )}
+            {settings.showProgressPanel && (
+              <div className="space-y-4 rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 shadow-[var(--shadow-cute)] backdrop-blur">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold text-foreground">Subjects</h2>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Overall {overallPct}%
+                  </span>
+                </div>
+                <div className="flex justify-center border-b border-[color:var(--border)] pb-4">
+                  <Donut pct={overallPct} size={104} stroke={10} label="All lessons" sublabel={`${counts.done}/${counts.all} done`} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {stats.length === 0 && (
+                    <p className="col-span-2 text-center text-xs text-muted-foreground">Add lessons to see progress here.</p>
+                  )}
+                  {stats.map((s) => (
+                    <Donut key={s.subject} pct={s.pct} size={64} stroke={7} label={s.subject} sublabel={`${s.done}/${s.total}`} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </aside>
         </div>
 
         <footer className="mt-6 text-center text-xs text-muted-foreground">
