@@ -473,23 +473,14 @@ function Index() {
 
               {/* Desktop table */}
               <div className="hidden overflow-x-auto md:block">
-                <table className="w-full border-collapse text-left text-sm" style={{ tableLayout: "fixed" }}>
-                  <colgroup>
-                    {columns.map((c, i) => {
-                      const isFirst = i === 0;
-                      const isDescription = c.id === "description" || i === columns.length - 1;
-                      return <col key={c.id} style={{ width: isFirst ? "14%" : isDescription ? "auto" : "16%" }} />;
-                    })}
-                    <col style={{ width: "130px" }} />
-                    <col style={{ width: "90px" }} />
-                    <col style={{ width: "120px" }} />
-                    <col style={{ width: "140px" }} />
-                    <col style={{ width: "44px" }} />
-                  </colgroup>
+                <table
+                  className="w-full border-collapse text-left text-sm"
+                  style={{ minWidth: 760 + columns.length * 90 }}
+                >
                   <thead>
                     <tr className="border-b border-[color:var(--border)] bg-[color:var(--muted)]/60 text-[11px] uppercase tracking-wider text-muted-foreground">
                       {columns.map((c) => (
-                        <th key={c.id} className="group px-4 py-3 font-semibold">
+                        <th key={c.id} className="group whitespace-nowrap px-4 py-3 font-semibold">
                           <span className="mr-1.5">{c.emoji}</span>
                           <button className="hover:text-primary" onClick={() => renameColumn(c.id)}>
                             {c.label}
@@ -506,13 +497,15 @@ function Index() {
                           )}
                         </th>
                       ))}
-                      <th className="px-4 py-3 font-semibold">📅 Date</th>
-                      <th className="px-2 py-3 font-semibold">🕒 Time</th>
-                      <th className="px-2 py-3 font-semibold">⚡ Priority</th>
-                      <th className="px-4 py-3 font-semibold">Status</th>
-                      <th className="px-2 py-3"></th>
+                      <th className="w-[130px] whitespace-nowrap px-4 py-3 font-semibold">📅 Date</th>
+                      <th className="w-[130px] whitespace-nowrap px-2 py-3 font-semibold">⏳ Due date</th>
+                      <th className="w-[92px] whitespace-nowrap px-2 py-3 font-semibold">🕒 Time</th>
+                      <th className="w-[120px] whitespace-nowrap px-2 py-3 font-semibold">⚡ Priority</th>
+                      <th className="w-[140px] whitespace-nowrap px-4 py-3 font-semibold">Status</th>
+                      <th className="w-[44px] px-2 py-3"></th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {visibleRows.map((row, idx) => {
                       const p = row.priorityId ? priorityMap.get(row.priorityId) : null;
