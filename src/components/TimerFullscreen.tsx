@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import type { TimerDisplay } from "@/lib/study-store";
+import {
+  DEFAULT_TIMER_BACKGROUND,
+  TIMER_BG_PRESETS,
+  timerBackgroundStyle,
+  type TimerDisplay,
+} from "@/lib/study-store";
+
 
 type Props = {
   open: boolean;
