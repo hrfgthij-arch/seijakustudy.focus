@@ -368,11 +368,9 @@ export function useStudyStore() {
     setSharedState(initial);
     setIsHydrated(true);
 
-    // Restore guest snapshot pending merge, if any
-    try {
-      const snapRaw = window.localStorage.getItem(GUEST_SNAPSHOT_KEY);
-      if (snapRaw) setGuestSnapshot(normalizeState(JSON.parse(snapRaw)));
-    } catch {}
+    // Guest snapshots are restored per-account inside handleUser, so a resolved
+    // merge never comes back.
+
   }, []);
 
   // Auth subscription — hook up cloud sync
