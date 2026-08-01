@@ -12,8 +12,13 @@ export type Row = {
   status: Status;
   date: string | null;
   time: string | null;
+  dueDate: string | null;
   priorityId: string | null;
 };
+
+/** Maximum number of user-defined columns in the lessons table. */
+export const MAX_COLUMNS = 8;
+
 
 export type SleepEntry = {
   id: string;
@@ -43,21 +48,31 @@ export type WeekStart = "sunday" | "monday";
 
 export type QuickLink = { id: string; label: string; url: string; icon?: string };
 
+export type TimerBackground = {
+  /** "preset" uses a built-in gradient key, "color" a solid CSS color, "image" a URL. */
+  kind: "preset" | "color" | "image";
+  value: string;
+  opacity: number;
+};
+
 export type TimerDisplay = {
   theme: "light" | "dark";
   style: "digital" | "flip" | "minimal";
   showSeconds: boolean;
   showDate: boolean;
   showTimer: boolean;
+  background: TimerBackground;
 };
 
 export type Settings = {
   bannerImage: string | null;
   pdfUrl: string | null;
   pdfName: string | null;
+  displayName: string | null;
   timerSize: { w: number; h: number };
   showSleep: boolean;
   showPdf: boolean;
+  showProgressPanel: boolean;
   weekStart: WeekStart;
   timeRanges: string[];
   lessonsView: "important" | "all";
@@ -66,6 +81,7 @@ export type Settings = {
   spotifyUrl: string | null;
   showSpotify: boolean;
 };
+
 
 export const DEFAULT_COLUMNS: Column[] = [
   { id: "subject", label: "Subject", emoji: "📘" },
