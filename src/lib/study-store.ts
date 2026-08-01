@@ -98,21 +98,35 @@ export const DEFAULT_PRIORITIES: Priority[] = [
 
 export const DEFAULT_TIME_RANGES: string[] = Array.from({ length: 15 }, (_, i) => `${String(6 + i).padStart(2, "0")}:00`);
 
+export const TIMER_BG_PRESETS: { id: string; label: string; css: string; dark: boolean }[] = [
+  { id: "sky", label: "Sky", css: "linear-gradient(135deg, oklch(0.94 0.05 240), oklch(0.88 0.08 260))", dark: false },
+  { id: "sakura", label: "Sakura", css: "linear-gradient(135deg, oklch(0.95 0.04 350), oklch(0.9 0.07 320))", dark: false },
+  { id: "mint", label: "Mint", css: "linear-gradient(135deg, oklch(0.95 0.05 170), oklch(0.9 0.07 200))", dark: false },
+  { id: "sunset", label: "Sunset", css: "linear-gradient(135deg, oklch(0.9 0.09 60), oklch(0.86 0.11 25))", dark: false },
+  { id: "midnight", label: "Midnight", css: "linear-gradient(135deg, oklch(0.28 0.07 265), oklch(0.16 0.05 260))", dark: true },
+  { id: "plain", label: "Plain", css: "oklch(1 0 0)", dark: false },
+];
+
+export const DEFAULT_TIMER_BACKGROUND: TimerBackground = { kind: "preset", value: "sky", opacity: 0.6 };
+
 export const DEFAULT_TIMER_DISPLAY: TimerDisplay = {
   theme: "light",
   style: "digital",
   showSeconds: false,
   showDate: true,
   showTimer: true,
+  background: DEFAULT_TIMER_BACKGROUND,
 };
 
 export const DEFAULT_SETTINGS: Settings = {
   bannerImage: null,
   pdfUrl: null,
   pdfName: null,
+  displayName: null,
   timerSize: { w: 340, h: 130 },
   showSleep: false,
   showPdf: false,
+  showProgressPanel: false,
   weekStart: "sunday",
   timeRanges: DEFAULT_TIME_RANGES,
   lessonsView: "important",
@@ -121,6 +135,18 @@ export const DEFAULT_SETTINGS: Settings = {
   spotifyUrl: null,
   showSpotify: true,
 };
+
+/** Resolve a timer background into inline style props. */
+export function timerBackgroundStyle(bg?: TimerBackground): React.CSSProperties {
+  const b = bg ?? DEFAULT_TIMER_BACKGROUND;
+  if (b.kind === "image" && b.value) {
+    return { backgroundImage: `url(${b.value})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 1 };
+  }
+  if (b.kind === "color") return { background: b.value || "white" };
+  const preset = TIMER_BG_PRESETS.find((p) => p.id === b.value) ?? TIMER_BG_PRESETS[0];
+  return { background: preset.css };
+}
+
 
 export const DEFAULT_HABITS: Habit[] = [
   { id: "study", label: "Studied today", dates: [] },
