@@ -620,100 +620,19 @@ function Index() {
                 </table>
               </div>
 
-              {/* Mobile cards */}
-              <div className="grid gap-3 p-3 md:hidden">
-                {visibleRows.map((row) => {
-                  const subject = row.values[columns[0]?.id] || "Untitled";
-                  const p = row.priorityId ? priorityMap.get(row.priorityId) : null;
-                  return (
-                    <article key={row.id} className="rounded-xl border border-[color:var(--border)] bg-white p-3.5 shadow-sm">
-                      <div className="mb-2.5 flex items-center justify-between gap-2">
-                        <h3 className="truncate text-sm font-semibold text-foreground">{subject}</h3>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => cycleStatus(row.id)}
-                            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${STATUS_META[row.status].className}`}
-                          >
-                            <span>{STATUS_META[row.status].icon}</span>
-                            {STATUS_META[row.status].label}
-                          </button>
-                          <button
-                            onClick={() => deleteRow(row.id)}
-                            className="rounded-md p-1 text-muted-foreground hover:text-destructive"
-                            aria-label="Delete"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        {columns.map((c, i) => (
-                          <label key={c.id} className="block">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                              {c.emoji} {c.label}
-                            </span>
-                            {c.id === "description" ? (
-                              <div className="mt-0.5 rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2">
-                                <DescriptionCell
-                                  value={row.values[c.id] ?? ""}
-                                  onChange={(v) => updateCell(row.id, c.id, v)}
-                                  placeholder={`Add ${c.label.toLowerCase()}…`}
-                                />
-                              </div>
-                            ) : (
-                              <input
-                                value={row.values[c.id] ?? ""}
-                                onChange={(e) => updateCell(row.id, c.id, e.target.value)}
-                                placeholder={i === 0 ? "Subject name" : `Add ${c.label.toLowerCase()}…`}
-                                className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/25"
-                              />
-                            )}
-                          </label>
-                        ))}
-                        <div className="grid grid-cols-2 gap-2">
-                          <label className="block">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📅 Date</span>
-                            <input
-                              type="date"
-                              value={row.date ?? ""}
-                              onChange={(e) => updateDate(row.id, e.target.value || null)}
-                              className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                            />
-                          </label>
-                          <label className="block">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">🕒 Time</span>
-                            <input
-                              type="time"
-                              value={row.time ?? ""}
-                              onChange={(e) => updateTime(row.id, e.target.value || null)}
-                              className="mt-0.5 w-full rounded-md border border-[color:var(--border)] bg-white px-2.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                            />
-                          </label>
-                        </div>
-                        <label className="block">
-                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">⚡ Priority</span>
-                          <select
-                            value={row.priorityId ?? ""}
-                            onChange={(e) => updatePriority(row.id, e.target.value || null)}
-                            className="mt-0.5 w-full rounded-md border bg-white px-2.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                            style={{ borderColor: p ? p.color : "var(--border)", color: p ? p.color : undefined }}
-                          >
-                            <option value="">—</option>
-                            {priorities.map((pr) => (
-                              <option key={pr.id} value={pr.id}>{pr.label}</option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                    </article>
-                  );
-                })}
-                {visibleRows.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-[color:var(--border)] p-8 text-center text-sm text-muted-foreground">
-                    No lessons here yet — add one to start your study log.
-                  </div>
-                )}
-              </div>
+              <LessonListMobile
+                rows={visibleRows}
+                columns={columns}
+                priorities={priorities}
+                priorityMap={priorityMap}
+                updateCell={updateCell}
+                updateDate={updateDate}
+                updateDueDate={updateDueDate}
+                updateTime={updateTime}
+                updatePriority={updatePriority}
+                cycleStatus={cycleStatus}
+                deleteRow={deleteRow}
+              />
             </section>
 
             {/* PDF widget (opt-in) */}
