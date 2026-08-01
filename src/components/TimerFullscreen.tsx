@@ -74,14 +74,23 @@ export function TimerFullscreen({
     setCustomMin("");
   }
 
+  const bg = display.background ?? DEFAULT_TIMER_BACKGROUND;
+
   return createPortal(
     <div
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-center transition-colors ${
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden transition-colors ${
         dark
           ? "bg-[radial-gradient(ellipse_at_top,oklch(0.24_0.06_260),oklch(0.14_0.04_260))] text-white"
           : "bg-[radial-gradient(ellipse_at_top,oklch(0.98_0.02_255),oklch(0.94_0.04_255))] text-foreground"
       }`}
     >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{ ...timerBackgroundStyle(bg), opacity: bg.opacity }}
+      />
+      <div className="relative flex w-full flex-1 flex-col items-center justify-center">
+
       <div className="absolute right-4 top-4 flex items-center gap-2">
         <div className="relative">
           <button
