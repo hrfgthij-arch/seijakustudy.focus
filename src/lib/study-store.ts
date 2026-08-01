@@ -303,6 +303,44 @@ function hasMeaningfulData(s: State) {
   return s.rows.length > 0 || s.todos.length > 0 || s.plannerSlots.length > 0 || s.sleep.length > 0;
 }
 
+const MERGE_RESOLVED_KEY = "sakura-merge-resolved-v1";
+
+function isMergeResolved(uid: string) {
+  try {
+    const list = JSON.parse(window.localStorage.getItem(MERGE_RESOLVED_KEY) ?? "[]");
+    return Array.isArray(list) && list.includes(uid);
+  } catch {
+    return false;
+  }
+}
+
+function markMergeResolved(uid: string) {
+  try {
+    const list = JSON.parse(window.localStorage.getItem(MERGE_RESOLVED_KEY) ?? "[]");
+    const next = Array.isArray(list) ? list : [];
+    if (!next.includes(uid)) next.push(uid);
+    window.localStorage.setItem(MERGE_RESOLVED_KEY, JSON.stringify(next));
+  } catch {}
+}
+
+/** True when the local snapshot holds at least one item the cloud copy lacks. */
+function hasExtraData(local: State, remote: State) {
+  const ids = new Set<string>([
+    ...remote.rows.map((r) => r.id),
+    ...remote.todos.map((t) => t.id),
+    ...remote.plannerSlots.map((p) => p.id),
+    ...remote.sleep.map((s) => s.id),
+  ]);
+  const localIds = [
+    ...local.rows.map((r) => r.id),
+    ...local.todos.map((t) => t.id),
+    ...local.plannerSlots.map((p) => p.id),
+    ...local.sleep.map((s) => s.id),
+  ];
+  return localIds.some((id) => !ids.has(id));
+}
+
+
 // ---- Cloud sync ---- //
 
 async function fetchRemote(userId: string): Promise<{ data: State | null; updatedAt: string | null }> {
