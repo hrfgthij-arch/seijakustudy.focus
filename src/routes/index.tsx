@@ -549,6 +549,15 @@ function Index() {
                           </td>
                           <td className="px-2 py-2 align-top">
                             <input
+                              type="date"
+                              value={row.dueDate ?? ""}
+                              onChange={(e) => updateDueDate(row.id, e.target.value || null)}
+                              className="w-full rounded-md border border-transparent bg-transparent px-2 py-2 text-xs text-foreground outline-none focus:border-[color:var(--ring)] focus:bg-white focus:ring-2 focus:ring-primary/25"
+                            />
+                          </td>
+
+                          <td className="px-2 py-2 align-top">
+                            <input
                               type="time"
                               value={row.time ?? ""}
                               onChange={(e) => updateTime(row.id, e.target.value || null)}
