@@ -217,9 +217,11 @@ function migrateRow(r: any): Row {
     status: r.status,
     date: r.date ?? null,
     time: r.time ?? null,
+    dueDate: r.dueDate ?? null,
     priorityId: r.priorityId ?? null,
   };
 }
+
 
 function migrateSlot(s: any): PlannerSlot {
   const subjects: string[] = Array.isArray(s?.subjects)
@@ -250,7 +252,15 @@ function normalizeState(parsed: any): State {
         Array.isArray(parsed?.settings?.timeRanges) && parsed.settings.timeRanges.length
           ? parsed.settings.timeRanges
           : base.settings.timeRanges,
-      timerDisplay: { ...base.settings.timerDisplay, ...(parsed?.settings?.timerDisplay ?? {}) },
+      timerDisplay: {
+        ...base.settings.timerDisplay,
+        ...(parsed?.settings?.timerDisplay ?? {}),
+        background: {
+          ...base.settings.timerDisplay.background,
+          ...(parsed?.settings?.timerDisplay?.background ?? {}),
+        },
+      },
+
     },
     sleep: parsed?.sleep ?? [],
     todos: parsed?.todos ?? [],
@@ -283,10 +293,11 @@ function saveLocal(state: State) {
 }
 
 const seedRows = (): Row[] => [
-  { id: uid(), values: { subject: "Math", lesson: "Integrals", description: "Practice u-substitution" }, status: "progress", date: null, time: null, priorityId: "high" },
-  { id: uid(), values: { subject: "Japanese", lesson: "N5 Kanji", description: "Review chapter 3" }, status: "todo", date: null, time: null, priorityId: "medium" },
-  { id: uid(), values: { subject: "History", lesson: "Edo Period", description: "Notes + timeline" }, status: "done", date: null, time: null, priorityId: "low" },
+  { id: uid(), values: { subject: "Math", lesson: "Integrals", description: "Practice u-substitution" }, status: "progress", date: null, time: null, dueDate: null, priorityId: "high" },
+  { id: uid(), values: { subject: "Japanese", lesson: "N5 Kanji", description: "Review chapter 3" }, status: "todo", date: null, time: null, dueDate: null, priorityId: "medium" },
+  { id: uid(), values: { subject: "History", lesson: "Edo Period", description: "Notes + timeline" }, status: "done", date: null, time: null, dueDate: null, priorityId: "low" },
 ];
+
 
 function hasMeaningfulData(s: State) {
   return s.rows.length > 0 || s.todos.length > 0 || s.plannerSlots.length > 0 || s.sleep.length > 0;
