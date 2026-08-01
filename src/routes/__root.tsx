@@ -114,15 +114,23 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function NavBar() {
-  const [email, setEmail] = useState<string | null>(null);
+  const [signedIn, setSignedIn] = useState(false);
+  const { settings, setSettings } = useStudyStore();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+    supabase.auth.getUser().then(({ data }) => setSignedIn(!!data.user));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setEmail(session?.user?.email ?? null);
+      setSignedIn(!!session?.user);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  function saveName() {
+    setSettings({ ...settings, displayName: draft.trim() || null });
+    setEditing(false);
+  }
 
   return (
     <nav className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[color:var(--border)] bg-white/80 px-4 py-2 backdrop-blur md:px-6">
@@ -135,9 +143,33 @@ function NavBar() {
         <Link to="/sleep" className="text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>Sleep</Link>
       </div>
       <div className="flex items-center gap-2 text-xs">
-        {email ? (
+        {signedIn ? (
           <>
-            <span className="hidden truncate text-muted-foreground sm:inline max-w-[160px]">{email}</span>
+            {editing ? (
+              <input
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={saveName}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveName();
+                  if (e.key === "Escape") setEditing(false);
+                }}
+                placeholder="Your name"
+                className="w-28 rounded-md border border-[color:var(--border)] bg-white px-2 py-1 text-xs outline-none focus:border-primary"
+              />
+            ) : (
+              <button
+                onClick={() => {
+                  setDraft(settings.displayName ?? "");
+                  setEditing(true);
+                }}
+                className="max-w-[160px] truncate rounded-md px-1.5 py-1 font-semibold text-muted-foreground hover:text-primary"
+                title="Set the name shown here"
+              >
+                {settings.displayName || "+ Add name"}
+              </button>
+            )}
             <button
               onClick={async () => {
                 await supabase.auth.signOut();
@@ -156,6 +188,7 @@ function NavBar() {
     </nav>
   );
 }
+
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
