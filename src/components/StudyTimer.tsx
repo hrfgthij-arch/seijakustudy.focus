@@ -1,6 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { TimerFullscreen } from "./TimerFullscreen";
-import { DEFAULT_TIMER_DISPLAY, useStudyStore, type TimerDisplay } from "@/lib/study-store";
+import {
+  DEFAULT_TIMER_DISPLAY,
+  timerBackgroundStyle,
+  useStudyStore,
+  type TimerDisplay,
+} from "@/lib/study-store";
+
 
 const PRESETS = [15, 25, 45];
 
@@ -79,6 +85,20 @@ export function MobileStickyTimer() {
     </div>
   );
 }
+
+/** Sticky pill that rides along the top of the page whenever the timer runs. */
+export function StickyTimerBar() {
+  const { running } = useSharedTimer();
+  if (!running) return null;
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-2 z-40 flex justify-center px-3">
+      <div className="pointer-events-auto">
+        <TimerCard variant="sticky" />
+      </div>
+    </div>
+  );
+}
+
 
 function TimerCard({ variant }: { variant: "full" | "sticky" }) {
   const { settings, setSettings } = useStudyStore();
