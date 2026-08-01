@@ -559,6 +559,7 @@ export function useStudyStore() {
       sleep: [...cur.sleep, ...guestSnapshot.sleep.filter((s) => !sleepIds.has(s.id))],
     };
     setSharedState(merged);
+    if (currentUserRef.current) markMergeResolved(currentUserRef.current);
     try {
       window.localStorage.removeItem(GUEST_SNAPSHOT_KEY);
     } catch {}
@@ -566,11 +567,13 @@ export function useStudyStore() {
   }, [guestSnapshot]);
 
   const discardGuestSnapshot = useCallback(() => {
+    if (currentUserRef.current) markMergeResolved(currentUserRef.current);
     try {
       window.localStorage.removeItem(GUEST_SNAPSHOT_KEY);
     } catch {}
     setGuestSnapshot(null);
   }, []);
+
 
   return {
     ...state,
