@@ -159,9 +159,10 @@ function Index() {
       {
         id: uid(),
         values,
-        status: "todo",
+        status: "todo" as Status,
         date: selectedDay ? toISO(selectedDay) : null,
         time: null,
+        dueDate: null,
         priorityId: null,
       },
     ]);
@@ -172,6 +173,9 @@ function Index() {
   }
   function updateDate(rowId: string, iso: string | null) {
     setRows((r) => r.map((row) => (row.id === rowId ? { ...row, date: iso } : row)));
+  }
+  function updateDueDate(rowId: string, iso: string | null) {
+    setRows((r) => r.map((row) => (row.id === rowId ? { ...row, dueDate: iso } : row)));
   }
   function updateTime(rowId: string, t: string | null) {
     setRows((r) => r.map((row) => (row.id === rowId ? { ...row, time: t } : row)));
@@ -188,6 +192,10 @@ function Index() {
   }
 
   function addColumn() {
+    if (columns.length >= MAX_COLUMNS) {
+      window.alert(`You can have up to ${MAX_COLUMNS} columns.`);
+      return;
+    }
     const label = window.prompt("New column name?");
     if (!label) return;
     const emoji = window.prompt("An emoji for this column? (optional)", "🔹") || "🔹";
@@ -195,6 +203,7 @@ function Index() {
     setColumns((c: Column[]) => [...c, { id, label, emoji }]);
     setRows((rs) => rs.map((r) => ({ ...r, values: { ...r.values, [id]: "" } })));
   }
+
   function renameColumn(colId: string) {
     const col = columns.find((c) => c.id === colId);
     if (!col) return;
