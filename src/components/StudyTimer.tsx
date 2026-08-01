@@ -169,7 +169,13 @@ function TimerCard({ variant }: { variant: "full" | "sticky" }) {
   }
 
   return (
-    <div className="flex h-full w-full flex-col justify-between rounded-2xl border border-[color:var(--border)] bg-white/60 p-3 shadow-[var(--shadow-cute)] backdrop-blur">
+    <div className="relative flex h-full w-full flex-col justify-between overflow-hidden rounded-2xl border border-[color:var(--border)] p-3 shadow-[var(--shadow-cute)] backdrop-blur">
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10"
+        style={{ ...timerBackgroundStyle(display.background), opacity: display.background?.opacity ?? 0.6 }}
+      />
+
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg">
           ⏱️
