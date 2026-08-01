@@ -250,7 +250,9 @@ export function TimerFullscreen({
           </div>
         )}
       </div>
+      </div>
     </div>,
+
     document.body,
   );
 }
