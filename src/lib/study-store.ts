@@ -408,23 +408,26 @@ export function useStudyStore() {
         suppressPush.current = false;
         await pushRemote(uid, localSnapshot);
       } else if (hasMeaningfulData(localSnapshot) && hasMeaningfulData(remote)) {
-        // Only offer merge if a guest snapshot hasn't already been resolved.
-        const alreadyResolved = (() => {
+        // Offer the merge only when: (a) this account never resolved a merge,
+        // and (b) the local data actually contains something the cloud lacks.
+        if (!isMergeResolved(uid) && hasExtraData(localSnapshot, remote)) {
           try {
-            return window.localStorage.getItem(GUEST_SNAPSHOT_KEY) === null && !guestSnapshot;
-          } catch {
-            return false;
-          }
-        })();
-        if (!alreadyResolved) {
-          try {
-            window.localStorage.setItem(GUEST_SNAPSHOT_KEY, JSON.stringify(localSnapshot));
+            window.localStorage.setItem(
+              GUEST_SNAPSHOT_KEY,
+              JSON.stringify({ userId: uid, state: localSnapshot }),
+            );
           } catch {}
           setGuestSnapshot(localSnapshot);
+        } else {
+          try {
+            window.localStorage.removeItem(GUEST_SNAPSHOT_KEY);
+          } catch {}
+          setGuestSnapshot(null);
         }
         suppressPush.current = true;
         setSharedState(remote);
         suppressPush.current = false;
+
       } else {
         const chosen = hasMeaningfulData(remote) ? remote : localSnapshot;
         suppressPush.current = true;
