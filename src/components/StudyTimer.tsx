@@ -86,18 +86,99 @@ export function MobileStickyTimer() {
   );
 }
 
-/** Sticky pill that rides along the top of the page whenever the timer runs. */
+const PILL_POS_KEY = "seijaku-timer-pill-pos";
+
+/** Draggable pill that floats above the page whenever the timer runs. */
 export function StickyTimerBar() {
   const { running } = useSharedTimer();
-  if (!running) return null;
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [ready, setReady] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+  const drag = useRef<{ dx: number; dy: number; moved: boolean } | null>(null);
+
+  useEffect(() => {
+    setReady(true);
+    try {
+      const raw = window.localStorage.getItem(PILL_POS_KEY);
+      if (raw) setPos(JSON.parse(raw));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function clamp(x: number, y: number) {
+    const el = ref.current;
+    const w = el?.offsetWidth ?? 200;
+    const h = el?.offsetHeight ?? 48;
+    return {
+      x: Math.min(Math.max(8, x), Math.max(8, window.innerWidth - w - 8)),
+      y: Math.min(Math.max(8, y), Math.max(8, window.innerHeight - h - 8)),
+    };
+  }
+
+  function onPointerDown(e: React.PointerEvent) {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    drag.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top, moved: false };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+  function onPointerMove(e: React.PointerEvent) {
+    const d = drag.current;
+    if (!d) return;
+    d.moved = true;
+    setPos(clamp(e.clientX - d.dx, e.clientY - d.dy));
+  }
+  function onPointerUp(e: React.PointerEvent) {
+    const d = drag.current;
+    drag.current = null;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    if (d?.moved && pos) {
+      try {
+        window.localStorage.setItem(PILL_POS_KEY, JSON.stringify(pos));
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  function recentre() {
+    setPos(null);
+    try {
+      window.localStorage.removeItem(PILL_POS_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (!running || !ready) return null;
+
+  const style: React.CSSProperties = pos
+    ? { left: pos.x, top: pos.y }
+    : { left: "50%", top: 8, transform: "translateX(-50%)" };
+
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-2 z-40 flex justify-center px-3">
-      <div className="pointer-events-auto">
+    <div ref={ref} className="fixed z-50 touch-none select-none" style={style} onDoubleClick={recentre}>
+      <div className="flex items-center gap-1">
+        <span
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          className="cursor-grab rounded-l-2xl border border-r-0 border-[color:var(--border)] bg-white/50 px-1.5 py-3 text-xs text-muted-foreground backdrop-blur-md active:cursor-grabbing"
+          title="Drag me · double-click to recentre"
+        >
+          ⠿
+        </span>
         <TimerCard variant="sticky" />
       </div>
     </div>
   );
 }
+
 
 
 function TimerCard({ variant }: { variant: "full" | "sticky" }) {
