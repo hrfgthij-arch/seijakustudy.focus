@@ -38,9 +38,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Seijaku Study — Plan, Study, Progress" },
-      { name: "description", content: "A cozy anime-themed planner: track lessons, plan days on the calendar, and watch each subject bloom." },
+      { name: "description", content: "A calm anime-themed study tracker: plan lessons, keep a weekly self-study planner, and watch your progress grow." },
       { property: "og:title", content: "Seijaku Study — Plan, Study, Progress" },
-      { property: "og:description", content: "A cozy anime-themed planner: track lessons, plan days on the calendar, and watch each subject bloom." },
+      { property: "og:description", content: "A calm anime-themed study tracker: plan lessons, keep a weekly self-study planner, and watch your progress grow." },
     ],
   }),
   component: Index,
@@ -255,13 +255,13 @@ function Index() {
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary shadow-sm backdrop-blur">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
-              Study Planner
+              Quiet Study, Steady Progress
             </div>
             <h1 className="text-3xl font-bold leading-tight text-foreground md:text-4xl">
               Seijaku Study
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Plan your days, track every lesson, and watch each subject bloom into progress. 🌸
+              Quiet focus, one lesson at a time — plan your days, track every lesson, and watch your progress grow. 🌿
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Link
@@ -275,7 +275,7 @@ function Index() {
                   { id: "banner", label: "Header banner", emoji: "🖼️", on: showBanner, onToggle: () => setShowBanner((v) => !v) },
                   { id: "pdf", label: "PDF embed", emoji: "📎", on: settings.showPdf, onToggle: () => setSettings({ ...settings, showPdf: !settings.showPdf }) },
                   { id: "sleep", label: "Sleep tracker", emoji: "🌙", on: settings.showSleep, onToggle: () => setSettings({ ...settings, showSleep: !settings.showSleep }) },
-                  { id: "spotify", label: "Spotify player", emoji: "🎧", on: settings.showSpotify, onToggle: () => setSettings({ ...settings, showSpotify: !settings.showSpotify }) },
+                  { id: "spotify", label: "Spotify player (desktop)", emoji: "🎧", on: settings.showSpotify, onToggle: () => setSettings({ ...settings, showSpotify: !settings.showSpotify }) },
                   { id: "links", label: "Quick links", emoji: "🔗", on: settings.showQuickLinks, onToggle: () => setSettings({ ...settings, showQuickLinks: !settings.showQuickLinks }) },
                   { id: "progress", label: "Subjects progress panel", emoji: "📊", on: settings.showProgressPanel, onToggle: () => setSettings({ ...settings, showProgressPanel: !settings.showProgressPanel }) },
                   { id: "priorities", label: "Priority editor", emoji: "⚡", on: showPriorityMgr, onToggle: () => setShowPriorityMgr((v) => !v) },
@@ -722,11 +722,13 @@ function Index() {
 
           <aside className="min-w-0 space-y-4">
             {settings.showSpotify && (
+              <div className="hidden lg:block">
               <SpotifyPlayer
                 url={settings.spotifyUrl}
                 onChange={(v) => setSettings({ ...settings, spotifyUrl: v })}
                 onHide={() => setSettings({ ...settings, showSpotify: false })}
               />
+              </div>
             )}
             <div className="hidden lg:block">
               <TodoList compact />
