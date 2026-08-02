@@ -144,6 +144,7 @@
   body {
     background: var(--gradient-bg);
     background-attachment: fixed;
+    position: relative;
     color: var(--color-foreground);
     font-family: 'Quicksand', 'Nunito', ui-sans-serif, system-ui, sans-serif;
   }
@@ -151,6 +152,19 @@
   h1, h2, h3 {
     font-family: 'Fredoka', 'Quicksand', ui-sans-serif, system-ui, sans-serif;
     letter-spacing: -0.01em;
+  }
+
+  /* Soft layered light so the blue background feels calm, not flat. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(60rem 40rem at 12% -10%, oklch(0.98 0.04 220 / 0.9), transparent 60%),
+      radial-gradient(50rem 34rem at 95% 8%, oklch(0.95 0.06 280 / 0.55), transparent 62%),
+      radial-gradient(46rem 30rem at 50% 110%, oklch(0.96 0.05 200 / 0.6), transparent 65%);
   }
 }
 
