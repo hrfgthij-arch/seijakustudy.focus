@@ -1,16 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Calendar } from "@/components/ui/calendar";
 import { Donut } from "@/components/Donut";
-import { STATUS_META, subjectStats, useStudyStore, type Row, type Priority } from "@/lib/study-store";
+import { DEFAULT_TIME_RANGES, useStudyStore, type WeekStart } from "@/lib/study-store";
 
 export const Route = createFileRoute("/progress")({
   head: () => ({
     meta: [
-      { title: "Progress — Sakura Bloom" },
-      { name: "description", content: "See how each subject is blooming with cute circular progress charts and your planned days." },
-      { property: "og:title", content: "Progress — Sakura Bloom" },
-      { property: "og:description", content: "See how each subject is blooming with cute circular progress charts and your planned days." },
+      { title: "Planner Progress — Seijaku Study" },
+      { name: "description", content: "See how consistent your self-study week was: habit ticks, streaks, and how much of your planner you filled in." },
+      { property: "og:title", content: "Planner Progress — Seijaku Study" },
+      { property: "og:description", content: "See how consistent your self-study week was: habit ticks, streaks, and how much of your planner you filled in." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ProgressPage,
@@ -23,150 +24,176 @@ function toISO(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
+function getWeekDates(weekStart: WeekStart, ref: Date): Date[] {
+  const startIdx = weekStart === "sunday" ? 0 : 1;
+  const d = new Date(ref);
+  d.setHours(0, 0, 0, 0);
+  const diff = (d.getDay() - startIdx + 7) % 7;
+  d.setDate(d.getDate() - diff);
+  return Array.from({ length: 7 }, (_, i) => {
+    const x = new Date(d);
+    x.setDate(d.getDate() + i);
+    return x;
+  });
+}
+
+/** Longest run of consecutive ticked days, counting backwards from today. */
+function currentStreak(dates: string[]) {
+  const set = new Set(dates);
+  let streak = 0;
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  while (set.has(toISO(d))) {
+    streak += 1;
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
 function ProgressPage() {
-  const { rows, columns, priorities } = useStudyStore();
-  const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
+  const { habits, plannerSlots, settings, hydrated } = useStudyStore();
+  const [weekOffset, setWeekOffset] = useState(0);
 
-  const stats = useMemo(() => subjectStats(rows), [rows]);
-  const total = rows.length;
-  const done = rows.filter((r) => r.status === "done").length;
-  const overallPct = total ? Math.round((done / total) * 100) : 0;
+  const weekDates = useMemo(() => {
+    const base = new Date();
+    base.setDate(base.getDate() + weekOffset * 7);
+    return getWeekDates(settings.weekStart, base);
+  }, [settings.weekStart, weekOffset]);
 
-  const priorityMap = useMemo(() => {
-    const m = new Map<string, Priority>();
-    priorities.forEach((p) => m.set(p.id, p));
-    return m;
-  }, [priorities]);
+  const weekKey = toISO(weekDates[0]);
+  const isCurrentWeek = weekOffset === 0;
+  const weekISOs = useMemo(() => weekDates.map(toISO), [weekDates]);
 
-  const plannedDays = useMemo(() => {
-    const set = new Set<string>();
-    rows.forEach((r) => r.date && set.add(r.date));
-    return Array.from(set).map((s) => {
-      const [y, m, d] = s.split("-").map(Number);
-      return new Date(y, m - 1, d);
+  const habitStats = useMemo(
+    () =>
+      habits.map((h) => {
+        const checks = weekISOs.filter((iso) => h.dates.includes(iso)).length;
+        return {
+          id: h.id,
+          label: h.label,
+          checks,
+          pct: Math.round((checks / 7) * 100),
+          streak: hydrated ? currentStreak(h.dates) : 0,
+        };
+      }),
+    [habits, weekISOs, hydrated],
+  );
+
+  const overall = useMemo(() => {
+    const total = habits.length * 7;
+    const done = habitStats.reduce((a, s) => a + s.checks, 0);
+    return { total, done, pct: total ? Math.round((done / total) * 100) : 0 };
+  }, [habits.length, habitStats]);
+
+  const coverage = useMemo(() => {
+    const rowsTimes = settings.timeRanges?.length ? settings.timeRanges : DEFAULT_TIME_RANGES;
+    const totalCells = rowsTimes.length * 7;
+    const filled = plannerSlots.filter((s) => {
+      const belongs = s.week ? s.week === weekKey : isCurrentWeek;
+      if (!belongs) return false;
+      if (!rowsTimes.includes(s.time)) return false;
+      return (s.subjects?.length ?? 0) > 0 || !!s.subject;
+    }).length;
+    return { filled, totalCells, pct: totalCells ? Math.round((filled / totalCells) * 100) : 0 };
+  }, [plannerSlots, settings.timeRanges, weekKey, isCurrentWeek]);
+
+  const plannedSubjects = useMemo(() => {
+    const map = new Map<string, number>();
+    plannerSlots.forEach((s) => {
+      const belongs = s.week ? s.week === weekKey : isCurrentWeek;
+      if (!belongs) return;
+      const list = s.subjects?.length ? s.subjects : s.subject ? [s.subject] : [];
+      list.forEach((x) => map.set(x, (map.get(x) ?? 0) + 1));
     });
-  }, [rows]);
+    return Array.from(map, ([subject, count]) => ({ subject, count })).sort((a, b) => b.count - a.count);
+  }, [plannerSlots, weekKey, isCurrentWeek]);
 
-  const dayRows = useMemo(() => {
-    if (!selectedDay) return [];
-    const iso = toISO(selectedDay);
-    return rows
-      .filter((r) => r.date === iso)
-      .sort((a, b) => (a.time ?? "99").localeCompare(b.time ?? "99"));
-  }, [rows, selectedDay]);
+  const maxCount = plannedSubjects[0]?.count ?? 1;
 
   return (
     <main className="min-h-screen px-4 py-8 md:px-10 md:py-14">
       <div className="mx-auto max-w-4xl">
-        <header className="mb-6 flex flex-col gap-3 md:mb-8 md:flex-row md:items-end md:justify-between">
+        <header className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary shadow-sm">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
-              Your Progress
+              Planner progress
             </div>
-            <h1 className="text-3xl font-bold leading-tight text-foreground md:text-4xl">Blooming subjects 🌸</h1>
-            <p className="mt-1 text-sm text-muted-foreground">A quick look at how each subject is coming along and what's planned.</p>
+            <h1 className="text-3xl font-bold text-foreground md:text-4xl">How your week went 📊</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Consistency ticks and planner coverage from your self-study planner.
+            </p>
           </div>
-          <Link
-            to="/"
-            className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary"
-          >
-            ← Back to tracker
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex gap-1">
+              <button onClick={() => setWeekOffset((v) => v - 1)} className="rounded-md border border-[color:var(--border)] bg-white px-2 py-1 text-xs hover:border-primary">← Prev</button>
+              <button onClick={() => setWeekOffset(0)} className="rounded-md border border-[color:var(--border)] bg-white px-2 py-1 text-xs hover:border-primary">This week</button>
+              <button onClick={() => setWeekOffset((v) => v + 1)} className="rounded-md border border-[color:var(--border)] bg-white px-2 py-1 text-xs hover:border-primary">Next →</button>
+            </div>
+            <Link to="/planner" className="rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary">
+              🗓️ Planner
+            </Link>
+            <Link to="/" className="rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm hover:border-primary hover:text-primary">
+              ← Tracker
+            </Link>
+          </div>
         </header>
 
-        <section className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-5 shadow-[var(--shadow-cute)]">
-          <div className="mb-5 flex items-center justify-center border-b border-[color:var(--border)] pb-5">
-            <Donut pct={overallPct} size={128} stroke={12} label="Overall" sublabel={`${done}/${total} lessons`} />
+        <section className="mb-6 rounded-2xl border border-[color:var(--border)] bg-white/90 p-5 shadow-[var(--shadow-cute)] backdrop-blur">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-foreground">
+              Week of {weekDates[0].toLocaleDateString([], { month: "short", day: "numeric" })}
+            </h2>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {overall.done}/{overall.total} ticks
+            </span>
           </div>
-          {stats.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">Add lessons on the tracker page to see your subjects here.</p>
+          <div className="flex flex-wrap items-center justify-center gap-8">
+            <Donut pct={overall.pct} size={132} stroke={12} label="Consistency" sublabel={`${overall.done}/${overall.total} ticks`} />
+            <Donut pct={coverage.pct} size={132} stroke={12} label="Planner filled" sublabel={`${coverage.filled}/${coverage.totalCells} slots`} />
+          </div>
+        </section>
+
+        <section className="mb-6 rounded-2xl border border-[color:var(--border)] bg-white/90 p-5 shadow-[var(--shadow-cute)] backdrop-blur">
+          <h2 className="mb-4 text-sm font-bold text-foreground">Habits this week</h2>
+          {habitStats.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-[color:var(--border)] px-4 py-8 text-center text-xs text-muted-foreground">
+              No habits yet — add some in the{" "}
+              <Link to="/planner" className="text-primary underline">self-study planner</Link>.
+            </p>
           ) : (
             <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4">
-              {stats.map((s) => (
-                <div key={s.subject} className="flex flex-col items-center gap-2 rounded-xl border border-[color:var(--border)] bg-white p-3">
-                  <Donut pct={s.pct} size={88} stroke={9} />
-                  <div className="text-center">
-                    <div className="max-w-[130px] truncate text-sm font-semibold text-foreground">{s.subject}</div>
-                    <div className="text-[11px] text-muted-foreground">
-                      {s.done}/{s.total} done · {s.progress} in progress
-                    </div>
-                  </div>
+              {habitStats.map((h) => (
+                <div key={h.id} className="flex flex-col items-center gap-1">
+                  <Donut pct={h.pct} size={84} stroke={8} label={h.label} sublabel={`${h.checks}/7`} />
+                  <span className="text-[10px] font-semibold text-muted-foreground">🔥 {h.streak} day streak</span>
                 </div>
               ))}
             </div>
           )}
         </section>
 
-        <section className="mt-6 rounded-2xl border border-[color:var(--border)] bg-white/90 shadow-[var(--shadow-cute)]">
-          <div className="border-b border-[color:var(--border)] px-4 py-3 md:px-5">
-            <h2 className="text-sm font-bold text-foreground">📅 Planned days</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">Days with lessons are dotted. Tap one to see what's on the schedule.</p>
-          </div>
-          <div className="grid gap-4 p-4 md:grid-cols-[auto_1fr] md:p-5">
-            <Calendar
-              mode="single"
-              selected={selectedDay}
-              onSelect={setSelectedDay}
-              modifiers={{ planned: plannedDays }}
-              modifiersClassNames={{
-                planned:
-                  "relative font-semibold text-primary after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-primary",
-              }}
-              className="pointer-events-auto rounded-xl border border-[color:var(--border)] bg-white p-2"
-            />
-            <div className="min-w-0">
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-foreground">
-                  {selectedDay ? selectedDay.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : "Pick a day"}
-                </h3>
-                <span className="text-[11px] font-semibold text-muted-foreground">{dayRows.length} lesson{dayRows.length === 1 ? "" : "s"}</span>
-              </div>
-              {dayRows.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-[color:var(--border)] px-3 py-6 text-center text-xs text-muted-foreground">
-                  Nothing planned for this day yet.
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {dayRows.map((r: Row) => {
-                    const s = STATUS_META[r.status];
-                    const subject = r.values[columns[0]?.id] || "Untitled";
-                    const lesson = r.values[columns[1]?.id] || "";
-                    const p = r.priorityId ? priorityMap.get(r.priorityId) : null;
-                    return (
-                      <li key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-[color:var(--border)] bg-white px-3 py-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          {r.time && (
-                            <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums text-primary">
-                              {r.time}
-                            </span>
-                          )}
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-semibold text-foreground">{subject}</div>
-                            {lesson && <div className="truncate text-xs text-muted-foreground">{lesson}</div>}
-                          </div>
-                        </div>
-                        <div className="flex flex-shrink-0 items-center gap-1.5">
-                          {p && (
-                            <span
-                              className="rounded-full border px-2 py-0.5 text-[10px] font-semibold"
-                              style={{ borderColor: p.color, color: p.color, backgroundColor: `color-mix(in oklch, ${p.color} 12%, white)` }}
-                            >
-                              {p.label}
-                            </span>
-                          )}
-                          <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${s.className}`}>
-                            <span>{s.icon}</span>
-                            {s.label}
-                          </span>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          </div>
+        <section className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-5 shadow-[var(--shadow-cute)] backdrop-blur">
+          <h2 className="mb-4 text-sm font-bold text-foreground">Planned subjects this week</h2>
+          {plannedSubjects.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-[color:var(--border)] px-4 py-8 text-center text-xs text-muted-foreground">
+              Nothing planned for this week yet.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {plannedSubjects.map((s) => (
+                <li key={s.subject} className="flex items-center gap-3">
+                  <span className="w-28 flex-shrink-0 truncate text-xs font-semibold text-foreground">{s.subject}</span>
+                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[color:var(--muted)]">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${(s.count / maxCount) * 100}%` }} />
+                  </div>
+                  <span className="w-14 flex-shrink-0 text-right text-[11px] font-semibold text-muted-foreground">
+                    {s.count} slot{s.count === 1 ? "" : "s"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
     </main>
