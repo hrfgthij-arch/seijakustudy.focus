@@ -233,6 +233,7 @@ function migrateSlot(s: any): PlannerSlot {
     : [];
   return {
     id: s.id ?? Math.random().toString(36).slice(2, 10),
+    week: typeof s.week === "string" ? s.week : "",
     weekday: s.weekday,
     time: s.time,
     subject: s.subject ?? subjects[0] ?? "",
