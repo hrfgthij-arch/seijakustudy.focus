@@ -32,8 +32,10 @@ export type SleepEntry = {
 export type Todo = { id: string; text: string; done: boolean; createdAt: string };
 
 // Planner: `subjects` is the multi-subject field; `subject` kept for backward compat.
+// `week` is the ISO date of that week's first day — each week gets a fresh table.
 export type PlannerSlot = {
   id: string;
+  week?: string;
   weekday: number;
   time: string;
   subject: string;
