@@ -37,9 +37,9 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Sakura Bloom — Plan, Study, Progress" },
+      { title: "Seijaku Study — Plan, Study, Progress" },
       { name: "description", content: "A cozy anime-themed planner: track lessons, plan days on the calendar, and watch each subject bloom." },
-      { property: "og:title", content: "Sakura Bloom — Plan, Study, Progress" },
+      { property: "og:title", content: "Seijaku Study — Plan, Study, Progress" },
       { property: "og:description", content: "A cozy anime-themed planner: track lessons, plan days on the calendar, and watch each subject bloom." },
     ],
   }),
@@ -258,7 +258,7 @@ function Index() {
               Study Planner
             </div>
             <h1 className="text-3xl font-bold leading-tight text-foreground md:text-4xl">
-              Sakura Bloom
+              Seijaku Study
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Plan your days, track every lesson, and watch each subject bloom into progress. 🌸

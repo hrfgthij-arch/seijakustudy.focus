@@ -5,9 +5,9 @@ import { useStudyStore } from "@/lib/study-store";
 export const Route = createFileRoute("/links")({
   head: () => ({
     meta: [
-      { title: "Quick Links — Sakura Bloom" },
+      { title: "Quick Links — Seijaku Study" },
       { name: "description", content: "Save and access your favorite study links in one tap." },
-      { property: "og:title", content: "Quick Links — Sakura Bloom" },
+      { property: "og:title", content: "Quick Links — Seijaku Study" },
       { property: "og:description", content: "Save and access your favorite study links in one tap." },
     ],
   }),
