@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TimerFullscreen } from "./TimerFullscreen";
 import {
   DEFAULT_TIMER_DISPLAY,
