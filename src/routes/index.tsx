@@ -47,13 +47,13 @@ export const Route = createFileRoute("/")({
 });
 
 const STICKERS = [
-  { src: stickerKurisu, style: { top: "8%", left: "1.5%" }, size: 118, r: "-9deg", delay: "0s" },
-  { src: stickerSkirk, style: { top: "32%", left: "1%" }, size: 114, r: "5deg", delay: "0.6s" },
-  { src: stickerMahiru, style: { top: "56%", left: "1.5%" }, size: 112, r: "-4deg", delay: "1.1s" },
-  { src: stickerSandrone, style: { top: "80%", left: "2%" }, size: 110, r: "-10deg", delay: "1.5s" },
-  { src: stickerViolet, style: { top: "14%", right: "1.5%" }, size: 118, r: "8deg", delay: "0.3s" },
-  { src: stickerNavia, style: { top: "46%", right: "1%" }, size: 114, r: "-6deg", delay: "0.9s" },
-  { src: stickerKaori, style: { top: "78%", right: "1.5%" }, size: 112, r: "7deg", delay: "1.3s" },
+  { src: stickerKurisu, style: { top: "16%", left: "0.5%" }, size: 108, r: "-9deg", delay: "0s" },
+  { src: stickerSkirk, style: { top: "38%", left: "0.2%" }, size: 106, r: "5deg", delay: "0.6s" },
+  { src: stickerMahiru, style: { top: "60%", left: "0.5%" }, size: 104, r: "-4deg", delay: "1.1s" },
+  { src: stickerSandrone, style: { top: "82%", left: "0.8%" }, size: 102, r: "-10deg", delay: "1.5s" },
+  { src: stickerViolet, style: { top: "22%", right: "0.5%" }, size: 108, r: "8deg", delay: "0.3s" },
+  { src: stickerNavia, style: { top: "50%", right: "0.2%" }, size: 106, r: "-6deg", delay: "0.9s" },
+  { src: stickerKaori, style: { top: "78%", right: "0.5%" }, size: 104, r: "7deg", delay: "1.3s" },
 ];
 
 // Mobile: fewer stickers, larger box, object-contain so nothing is cropped.
