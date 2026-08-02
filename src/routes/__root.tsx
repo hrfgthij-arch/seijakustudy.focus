@@ -80,9 +80,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Sakura Study — Cute Anime Study Tracker" },
+      { title: "Seijaku Study — Cute Anime Study Tracker" },
       { name: "description", content: "A kawaii study tracker with anime and Genshin stickers to keep your lessons organized and synced across devices." },
-      { property: "og:title", content: "Sakura Study — Cute Anime Study Tracker" },
+      { property: "og:title", content: "Seijaku Study — Cute Anime Study Tracker" },
       { property: "og:description", content: "A kawaii study tracker with anime and Genshin stickers to keep your lessons organized and synced across devices." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -137,7 +137,7 @@ function NavBar() {
   return (
     <nav className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[color:var(--border)] bg-white/80 px-4 py-2 backdrop-blur md:px-6">
       <div className="flex items-center gap-3 text-xs font-semibold">
-        <Link to="/" className="text-sm font-bold text-primary">🌸 Sakura</Link>
+        <Link to="/" className="text-sm font-bold text-primary">🌿 Seijaku</Link>
         <Link to="/planner" className="text-muted-foreground hover:text-primary" activeProps={{ className: "text-primary" }}>Planner</Link>
         <Link to="/progress" className="text-muted-foreground hover:text-primary" activeProps={{ className: "text-primary" }}>Progress</Link>
         <Link to="/todo" className="text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>To-do</Link>

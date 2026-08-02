@@ -1,45 +1,48 @@
+## My answers first
+
+**Name: "Seijaku Study".** It's distinctive, matches the calm/focus mood, and your published address is already `seijakustudy.lovable.app`. "Sakura Bloom" reads more generic-cute. I'd retitle the whole site to Seijaku Study (nav, page titles, meta descriptions) and keep the soft blue aesthetic.
+
+**Planner: multiple subjects + custom time ranges — not Google Calendar.** Google Calendar sync would need each user to connect their own Google account through an OAuth connector, only works for signed-in users, and pushes your planner into Google's data model (one event = one title, no habit ticks). Your planner data already syncs across devices through your own account, so Google adds account plumbing without adding much. Custom time ranges + multi-subject cells is fully under your control and works for guests too. (If you later want Calendar, it's best added as a one-way "export my week to Google" button rather than the source of truth.)
+
 ## What I'll build
 
-### 1. Self-study planner: editable time ranges + multi-subject cells
-- Add a "Time rows" editor above the weekly grid: add a row (time or range like `18:00–19:30`), edit a row's label inline, delete a row. Stored in `settings.timeRanges`, so it syncs.
-- Each cell holds multiple subjects: subjects render as removable chips, with a small `+` input to add another. Backed by the existing `PlannerSlot.subjects` array (the old single `subject` stays in sync for older data).
+**1. Rename to Seijaku Study**
+Nav/brand, all route `head()` titles and descriptions (`index`, `progress`, `planner`, `todo`, `sleep`, `links`, `auth`), and on-page headings.
 
-### 2. Pomodoro timer follows you while running
-- When the timer is running, it detaches into a compact, partially transparent pill pinned to the top of the viewport (below the nav) on both mobile and desktop, so it stays visible while scrolling. Click it to expand / open fullscreen. Replaces today's mobile-only sticky timer.
+**2. Planner: custom time ranges + multi-subject cells**
 
-### 3. Right column layout
-Right column order becomes: **Spotify → Quick links → lessons table**; the **to-do list** and **sleep tracker** stay in the left sidebar (to-do above, sleep below it). Every widget keeps a Hide button.
+- Replace the fixed 06:00–20:00 hourly rows with editable time ranges (e.g. "07:00–08:30"), stored in settings; add / rename / delete / reorder rows, with a "reset to default hours" action.
+- Each cell holds multiple subject chips: type + Enter to add, ✕ to remove, plus a per-cell note. Existing single-subject slots migrate into the chip list automatically.
+- If the user swtiches to a new week it shows a freash new table ready to fill.
 
-### 4. One "Widgets" dropdown for all show/hide toggles
-A single `⚙️ Widgets` button in the header opens a dropdown listing every optional block with a checkbox: Banner, PDF, Sleep tracker, Quick links, Spotify, Subject progress panel, Priorities editor. This is the one place to bring anything back after hiding it (the scattered "Show quick links" buttons get removed).
+**3. Spotify**
 
-### 5. Merge-data banner bugs
-- The banner will only be offered once per account, tracked by a persisted `merged:<userId>` marker in local storage, and cleared on merge **or** discard — so it never reappears after a choice.
-- It will also only appear when the guest snapshot actually differs from the cloud data (compares row/todo/planner/sleep IDs); identical data means no banner, which kills the "pops up for no reason" case.
+- Header shows only "🎧 Spotify Player" — once a playlist is loaded, the paste box and the raw code are hidden behind a small "Change" toggle, so the embed alone is visible.
+- Spotify is desktop-only: removed from mobile rendering and from the mobile widgets menu.
 
-### 6. Lessons table: columns and due date
-- New columns append to the **right** of existing user columns as real columns — the `<colgroup>` will be generated per-column with fixed percentage widths so nothing overlaps the description column.
-- Hard cap of **8** user columns; the `+ Column` button disables with a hint at the cap.
-- New built-in **Due date** column (alongside the existing Date/Time/Priority/Status), stored as `row.dueDate`, with overdue dates highlighted.
+**4. Draggable timer pill**
+The running-timer pill becomes drag-and-drop anywhere on screen (pointer events, works with touch), clamped inside the viewport, position remembered locally, with a double-tap-to-recentre. Buttons stay clickable (drag only starts past a small movement threshold).
 
-### 7. Mobile lessons view = collapsible list
-On phones, each lesson renders as one compact row (subject · status dot · priority · due date) with a chevron; tapping expands it to reveal all columns, date, time, priority, status and delete. Collapsed by default.
+**5. Progress page = self-study planner progress only**  
+Replaces the lesson-subject donuts with:
 
-### 8. Header shows a display name, not the email
-- Add `settings.displayName`. The nav shows the name if set, otherwise nothing.
-- The Widgets dropdown (and a small edit affordance next to the name) lets the user type/change their display name.
+- Overall week consistency donut (habit ticks completed ÷ habit×7).
+- One donut per habit for the current week, plus its streak.
+- A planner-coverage stat: how many planned slots this week have subjects filled in.
+- Week switcher (prev / this week / next) matching the planner's week-start setting.
+The lesson calendar/day list on that page is removed.
 
-### 9. Spotify widget accepts codes
-Input accepts and normalizes: full share URLs, `spotify:` URIs, a bare ID with a type picker, **and a pasted `<iframe …>` embed snippet** — the `src` is extracted and used. Invalid input shows a clear inline hint instead of an empty box.
+**6. Aesthetic pass (restrained)**
+Softer layered blue background with a subtle grain, one consistent card style (unified radius, border, hover lift), tighter type scale, calmer chip/badge colours, gentle transitions. No heavy animation, no clutter — stickers stay as they are, just spaced consistently.
 
-### 10. Timer background customization
-Timer settings gain a background picker: a set of gradient/solid presets, a custom color, or an image URL, plus an opacity slider. Applies to the widget, the sticky pill and fullscreen mode; stored in `settings.timerDisplay.background`.
+Also fixing quietly: the hydration mismatch that logs an error on first load of the tracker page.
 
-### 11. Removed
-The left-sidebar progress/donut panel is dropped from the desktop home page (the `/progress` page keeps it). Its space goes to the to-do list and sleep tracker.
+## 7. Drag and drop columns on the lessons table
 
-## Technical notes
-- `src/lib/study-store.ts`: bump to v6 — add `Row.dueDate`, `Settings.displayName`, `TimerDisplay.background`, `MAX_COLUMNS = 8`; rework merge gating with a per-user merged marker + snapshot diff.
-- New: `src/components/WidgetsMenu.tsx`, `src/components/StickyTimerBar.tsx`, `src/components/LessonListMobile.tsx`.
-- Edited: `src/routes/index.tsx` (layout, colgroup, due date, mobile list), `src/routes/planner.tsx` (time-range editor, multi-subject cells), `src/components/StudyTimer.tsx` + `TimerFullscreen.tsx` (background + sticky), `src/components/SpotifyPlayer.tsx` (code parsing), `src/routes/__root.tsx` (display name).
-- No database migration needed — everything lives in the existing synced JSON state, with normalization defaults so existing saved data keeps working.
+The user can drag any column on the lessons table and rearrage it however they want.
+
+### Technical notes
+
+- `study-store.ts` bumps to v7: `settings.timeRanges` becomes the planner's row source, `PlannerSlot.subjects: string[]` becomes canonical (v6 `subject` migrated in), plus a local-only stored timer pill position.
+- Timer pill drag lives in `StudyTimer.tsx` using pointer events; position kept in `localStorage`, not cloud state, so it doesn't churn sync.
+- Progress page reads `habits` + `plannerSlots` only; `subjectStats` stays exported for the tracker sidebar.

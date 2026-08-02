@@ -4,10 +4,10 @@ import { TodoList } from "@/components/TodoList";
 export const Route = createFileRoute("/todo")({
   head: () => ({
     meta: [
-      { title: "To-do — Sakura Bloom" },
-      { name: "description", content: "A quick, cozy to-do list synced to your Sakura Bloom study tracker." },
-      { property: "og:title", content: "To-do — Sakura Bloom" },
-      { property: "og:description", content: "A quick, cozy to-do list synced to your Sakura Bloom study tracker." },
+      { title: "To-do — Seijaku Study" },
+      { name: "description", content: "A quick, cozy to-do list synced to your Seijaku Study study tracker." },
+      { property: "og:title", content: "To-do — Seijaku Study" },
+      { property: "og:description", content: "A quick, cozy to-do list synced to your Seijaku Study study tracker." },
     ],
   }),
   component: TodoPage,

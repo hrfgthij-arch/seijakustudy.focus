@@ -37,23 +37,23 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Sakura Bloom — Plan, Study, Progress" },
-      { name: "description", content: "A cozy anime-themed planner: track lessons, plan days on the calendar, and watch each subject bloom." },
-      { property: "og:title", content: "Sakura Bloom — Plan, Study, Progress" },
-      { property: "og:description", content: "A cozy anime-themed planner: track lessons, plan days on the calendar, and watch each subject bloom." },
+      { title: "Seijaku Study — Plan, Study, Progress" },
+      { name: "description", content: "A calm anime-themed study tracker: plan lessons, keep a weekly self-study planner, and watch your progress grow." },
+      { property: "og:title", content: "Seijaku Study — Plan, Study, Progress" },
+      { property: "og:description", content: "A calm anime-themed study tracker: plan lessons, keep a weekly self-study planner, and watch your progress grow." },
     ],
   }),
   component: Index,
 });
 
 const STICKERS = [
-  { src: stickerKurisu, style: { top: "8%", left: "1.5%" }, size: 118, r: "-9deg", delay: "0s" },
-  { src: stickerSkirk, style: { top: "32%", left: "1%" }, size: 114, r: "5deg", delay: "0.6s" },
-  { src: stickerMahiru, style: { top: "56%", left: "1.5%" }, size: 112, r: "-4deg", delay: "1.1s" },
-  { src: stickerSandrone, style: { top: "80%", left: "2%" }, size: 110, r: "-10deg", delay: "1.5s" },
-  { src: stickerViolet, style: { top: "14%", right: "1.5%" }, size: 118, r: "8deg", delay: "0.3s" },
-  { src: stickerNavia, style: { top: "46%", right: "1%" }, size: 114, r: "-6deg", delay: "0.9s" },
-  { src: stickerKaori, style: { top: "78%", right: "1.5%" }, size: 112, r: "7deg", delay: "1.3s" },
+  { src: stickerKurisu, style: { top: "16%", left: "0.5%" }, size: 108, r: "-9deg", delay: "0s" },
+  { src: stickerSkirk, style: { top: "38%", left: "0.2%" }, size: 106, r: "5deg", delay: "0.6s" },
+  { src: stickerMahiru, style: { top: "60%", left: "0.5%" }, size: 104, r: "-4deg", delay: "1.1s" },
+  { src: stickerSandrone, style: { top: "82%", left: "0.8%" }, size: 102, r: "-10deg", delay: "1.5s" },
+  { src: stickerViolet, style: { top: "22%", right: "0.5%" }, size: 108, r: "8deg", delay: "0.3s" },
+  { src: stickerNavia, style: { top: "50%", right: "0.2%" }, size: 106, r: "-6deg", delay: "0.9s" },
+  { src: stickerKaori, style: { top: "78%", right: "0.5%" }, size: 104, r: "7deg", delay: "1.3s" },
 ];
 
 // Mobile: fewer stickers, larger box, object-contain so nothing is cropped.
@@ -255,13 +255,13 @@ function Index() {
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary shadow-sm backdrop-blur">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
-              Study Planner
+              Quiet Study, Steady Progress
             </div>
             <h1 className="text-3xl font-bold leading-tight text-foreground md:text-4xl">
-              Sakura Bloom
+              Seijaku Study
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Plan your days, track every lesson, and watch each subject bloom into progress. 🌸
+              Quiet focus, one lesson at a time — plan your days, track every lesson, and watch your progress grow. 🌿
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Link
@@ -275,7 +275,7 @@ function Index() {
                   { id: "banner", label: "Header banner", emoji: "🖼️", on: showBanner, onToggle: () => setShowBanner((v) => !v) },
                   { id: "pdf", label: "PDF embed", emoji: "📎", on: settings.showPdf, onToggle: () => setSettings({ ...settings, showPdf: !settings.showPdf }) },
                   { id: "sleep", label: "Sleep tracker", emoji: "🌙", on: settings.showSleep, onToggle: () => setSettings({ ...settings, showSleep: !settings.showSleep }) },
-                  { id: "spotify", label: "Spotify player", emoji: "🎧", on: settings.showSpotify, onToggle: () => setSettings({ ...settings, showSpotify: !settings.showSpotify }) },
+                  { id: "spotify", label: "Spotify player (desktop)", emoji: "🎧", on: settings.showSpotify, onToggle: () => setSettings({ ...settings, showSpotify: !settings.showSpotify }) },
                   { id: "links", label: "Quick links", emoji: "🔗", on: settings.showQuickLinks, onToggle: () => setSettings({ ...settings, showQuickLinks: !settings.showQuickLinks }) },
                   { id: "progress", label: "Subjects progress panel", emoji: "📊", on: settings.showProgressPanel, onToggle: () => setSettings({ ...settings, showProgressPanel: !settings.showProgressPanel }) },
                   { id: "priorities", label: "Priority editor", emoji: "⚡", on: showPriorityMgr, onToggle: () => setShowPriorityMgr((v) => !v) },
@@ -722,11 +722,13 @@ function Index() {
 
           <aside className="min-w-0 space-y-4">
             {settings.showSpotify && (
+              <div className="hidden lg:block">
               <SpotifyPlayer
                 url={settings.spotifyUrl}
                 onChange={(v) => setSettings({ ...settings, spotifyUrl: v })}
                 onHide={() => setSettings({ ...settings, showSpotify: false })}
               />
+              </div>
             )}
             <div className="hidden lg:block">
               <TodoList compact />

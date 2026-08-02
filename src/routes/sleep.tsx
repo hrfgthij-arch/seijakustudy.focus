@@ -5,9 +5,9 @@ import { useStudyStore } from "@/lib/study-store";
 export const Route = createFileRoute("/sleep")({
   head: () => ({
     meta: [
-      { title: "Sleep tracker — Sakura Bloom" },
+      { title: "Sleep tracker — Seijaku Study" },
       { name: "description", content: "Log your sleep and wake times each night and watch weekly averages." },
-      { property: "og:title", content: "Sleep tracker — Sakura Bloom" },
+      { property: "og:title", content: "Sleep tracker — Seijaku Study" },
       { property: "og:description", content: "Log your sleep and wake times each night and watch weekly averages." },
     ],
   }),

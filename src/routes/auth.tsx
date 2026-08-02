@@ -6,10 +6,10 @@ import { lovable } from "@/integrations/lovable";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Sakura Bloom" },
-      { name: "description", content: "Sign in to sync your Sakura Bloom study tracker across devices." },
-      { property: "og:title", content: "Sign in — Sakura Bloom" },
-      { property: "og:description", content: "Sign in to sync your Sakura Bloom study tracker across devices." },
+      { title: "Sign in — Seijaku Study" },
+      { name: "description", content: "Sign in to sync your Seijaku Study study tracker across devices." },
+      { property: "og:title", content: "Sign in — Seijaku Study" },
+      { property: "og:description", content: "Sign in to sync your Seijaku Study study tracker across devices." },
     ],
   }),
   component: AuthPage,
@@ -84,7 +84,7 @@ function AuthPage() {
         <Link to="/" className="mb-4 inline-block text-xs font-semibold text-muted-foreground hover:text-primary">
           ← Back
         </Link>
-        <h1 className="text-2xl font-bold text-foreground">Welcome to Sakura Bloom 🌸</h1>
+        <h1 className="text-2xl font-bold text-foreground">Welcome to Seijaku Study 🌸</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Sign in to sync your tracker across every device. You can also keep studying as a guest.
         </p>
