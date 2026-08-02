@@ -374,8 +374,10 @@ function setSharedState(s: State) {
 }
 
 export function useStudyStore() {
-  const [state, setLocalState] = useState<State>(() => sharedState ?? emptyState());
-  const [isHydrated, setIsHydrated] = useState(hydrated);
+  // Always start from the empty state so the first client render matches SSR;
+  // real data arrives in the effects below (avoids hydration mismatches).
+  const [state, setLocalState] = useState<State>(() => emptyState());
+  const [isHydrated, setIsHydrated] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [guestSnapshot, setGuestSnapshot] = useState<State | null>(null);
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -395,6 +397,7 @@ export function useStudyStore() {
   // Initial hydrate from local
   useEffect(() => {
     if (hydrated) {
+      if (sharedState) setLocalState(sharedState);
       setIsHydrated(true);
       return;
     }
