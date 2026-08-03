@@ -4,6 +4,7 @@ import {
   DEFAULT_TIMER_BACKGROUND,
   TIMER_BG_PRESETS,
   timerBackgroundStyle,
+  useStudyStore,
   type TimerDisplay,
 } from "@/lib/study-store";
 
