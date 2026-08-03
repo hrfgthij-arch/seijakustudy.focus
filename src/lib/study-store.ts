@@ -214,6 +214,8 @@ export const DEFAULT_SETTINGS: Settings = {
   timerDisplay: DEFAULT_TIMER_DISPLAY,
   spotifyUrl: null,
   showSpotify: true,
+  timeFormat: "12h",
+  theme: "seijaku",
 };
 
 /** Resolve a timer background into inline style props. */
