@@ -85,28 +85,29 @@ function ProgressPage() {
     return { total, done, pct: total ? Math.round((done / total) * 100) : 0 };
   }, [habits.length, habitStats]);
 
+  const weekEvents = useMemo(
+    () =>
+      plannerEvents.filter((e) => {
+        if (e.repeat !== "none") return (e.week || weekKey) <= weekKey;
+        return e.week ? e.week === weekKey : isCurrentWeek;
+      }),
+    [plannerEvents, weekKey, isCurrentWeek],
+  );
+
   const coverage = useMemo(() => {
-    const rowsTimes = settings.timeRanges?.length ? settings.timeRanges : DEFAULT_TIME_RANGES;
-    const totalCells = rowsTimes.length * 7;
-    const filled = plannerSlots.filter((s) => {
-      const belongs = s.week ? s.week === weekKey : isCurrentWeek;
-      if (!belongs) return false;
-      if (!rowsTimes.includes(s.time)) return false;
-      return (s.subjects?.length ?? 0) > 0 || !!s.subject;
-    }).length;
+    const totalCells = weekEvents.length;
+    const filled = weekEvents.filter((e) => e.done).length;
     return { filled, totalCells, pct: totalCells ? Math.round((filled / totalCells) * 100) : 0 };
-  }, [plannerSlots, settings.timeRanges, weekKey, isCurrentWeek]);
+  }, [weekEvents]);
 
   const plannedSubjects = useMemo(() => {
     const map = new Map<string, number>();
-    plannerSlots.forEach((s) => {
-      const belongs = s.week ? s.week === weekKey : isCurrentWeek;
-      if (!belongs) return;
-      const list = s.subjects?.length ? s.subjects : s.subject ? [s.subject] : [];
-      list.forEach((x) => map.set(x, (map.get(x) ?? 0) + 1));
+    weekEvents.forEach((e) => {
+      const name = (e.title || "Untitled").trim();
+      map.set(name, (map.get(name) ?? 0) + 1);
     });
     return Array.from(map, ([subject, count]) => ({ subject, count })).sort((a, b) => b.count - a.count);
-  }, [plannerSlots, weekKey, isCurrentWeek]);
+  }, [weekEvents]);
 
   const maxCount = plannedSubjects[0]?.count ?? 1;
 
