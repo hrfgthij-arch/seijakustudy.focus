@@ -434,7 +434,7 @@ const seedRows = (): Row[] => [
 
 
 function hasMeaningfulData(s: State) {
-  return s.rows.length > 0 || s.todos.length > 0 || s.plannerSlots.length > 0 || s.sleep.length > 0;
+  return s.rows.length > 0 || s.todos.length > 0 || s.plannerSlots.length > 0 || s.plannerEvents.length > 0 || s.sleep.length > 0;
 }
 
 const MERGE_RESOLVED_KEY = "sakura-merge-resolved-v1";
@@ -463,12 +463,14 @@ function hasExtraData(local: State, remote: State) {
     ...remote.rows.map((r) => r.id),
     ...remote.todos.map((t) => t.id),
     ...remote.plannerSlots.map((p) => p.id),
+    ...remote.plannerEvents.map((p) => p.id),
     ...remote.sleep.map((s) => s.id),
   ]);
   const localIds = [
     ...local.rows.map((r) => r.id),
     ...local.todos.map((t) => t.id),
     ...local.plannerSlots.map((p) => p.id),
+    ...local.plannerEvents.map((p) => p.id),
     ...local.sleep.map((s) => s.id),
   ];
   return localIds.some((id) => !ids.has(id));
@@ -687,12 +689,14 @@ export function useStudyStore() {
     const rowIds = new Set(cur.rows.map((r) => r.id));
     const todoIds = new Set(cur.todos.map((t) => t.id));
     const slotIds = new Set(cur.plannerSlots.map((s) => s.id));
+    const eventIds = new Set(cur.plannerEvents.map((e) => e.id));
     const sleepIds = new Set(cur.sleep.map((s) => s.id));
     const merged: State = {
       ...cur,
       rows: [...cur.rows, ...guestSnapshot.rows.filter((r) => !rowIds.has(r.id))],
       todos: [...cur.todos, ...guestSnapshot.todos.filter((t) => !todoIds.has(t.id))],
       plannerSlots: [...cur.plannerSlots, ...guestSnapshot.plannerSlots.filter((s) => !slotIds.has(s.id))],
+      plannerEvents: [...cur.plannerEvents, ...guestSnapshot.plannerEvents.filter((e) => !eventIds.has(e.id))],
       sleep: [...cur.sleep, ...guestSnapshot.sleep.filter((s) => !sleepIds.has(s.id))],
     };
     setSharedState(merged);
@@ -721,6 +725,7 @@ export function useStudyStore() {
     setSleep: setter("sleep"),
     setTodos: setter("todos"),
     setPlannerSlots: setter("plannerSlots"),
+    setPlannerEvents: setter("plannerEvents"),
     setHabits: setter("habits"),
     setQuickLinks: setter("quickLinks"),
     hydrated: isHydrated,
