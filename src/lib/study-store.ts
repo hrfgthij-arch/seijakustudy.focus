@@ -158,6 +158,8 @@ export type Settings = {
   timerDisplay: TimerDisplay;
   spotifyUrl: string | null;
   showSpotify: boolean;
+  timeFormat: TimeFormat;
+  theme: ThemeId;
 };
 
 
