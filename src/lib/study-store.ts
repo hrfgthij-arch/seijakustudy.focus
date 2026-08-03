@@ -48,6 +48,82 @@ export type Habit = { id: string; label: string; dates: string[] };
 
 export type WeekStart = "sunday" | "monday";
 
+export type TimeFormat = "12h" | "24h";
+
+/** A Google-Calendar-style planner event. `start`/`end` are minutes from midnight. */
+export type PlannerEvent = {
+  id: string;
+  /** ISO date of the first day of the week this event belongs to. */
+  week: string;
+  weekday: number;
+  start: number;
+  end: number;
+  title: string;
+  description: string;
+  color: string;
+  allDay: boolean;
+  repeat: "none" | "weekly" | "weekdays";
+  done: boolean;
+};
+
+export const EVENT_COLORS: { id: string; label: string; css: string }[] = [
+  { id: "blue", label: "Blueberry", css: "oklch(0.58 0.15 258)" },
+  { id: "pink", label: "Flamingo", css: "oklch(0.68 0.15 355)" },
+  { id: "green", label: "Basil", css: "oklch(0.58 0.13 155)" },
+  { id: "amber", label: "Tangerine", css: "oklch(0.72 0.15 65)" },
+  { id: "purple", label: "Grape", css: "oklch(0.55 0.16 300)" },
+  { id: "red", label: "Tomato", css: "oklch(0.6 0.19 25)" },
+  { id: "teal", label: "Peacock", css: "oklch(0.62 0.11 205)" },
+  { id: "graphite", label: "Graphite", css: "oklch(0.55 0.02 250)" },
+];
+
+export function eventColorCss(id: string) {
+  return (EVENT_COLORS.find((c) => c.id === id) ?? EVENT_COLORS[0]).css;
+}
+
+/** 24 hour rows: 12 AM through 11 PM. */
+export const DAY_HOURS: number[] = Array.from({ length: 24 }, (_, i) => i);
+
+export function formatMinutes(mins: number, fmt: TimeFormat = "12h") {
+  const m = ((mins % 1440) + 1440) % 1440;
+  const h = Math.floor(m / 60);
+  const mm = String(m % 60).padStart(2, "0");
+  if (fmt === "24h") return `${String(h).padStart(2, "0")}:${mm}`;
+  const suffix = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${mm} ${suffix}`;
+}
+
+export function formatHourLabel(hour: number, fmt: TimeFormat = "12h") {
+  if (fmt === "24h") return `${String(hour).padStart(2, "0")}:00`;
+  const suffix = hour < 12 ? "AM" : "PM";
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h12} ${suffix}`;
+}
+
+/** "HH:MM" -> minutes; tolerant of "07:00–08:30" legacy labels. */
+export function parseTimeToMinutes(value: string): number {
+  const m = /(\d{1,2}):(\d{2})/.exec(value ?? "");
+  if (!m) return 8 * 60;
+  return Math.min(23 * 60 + 59, Number(m[1]) * 60 + Number(m[2]));
+}
+
+export function minutesToInput(mins: number) {
+  const m = ((mins % 1440) + 1440) % 1440;
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+
+export type ThemeId = "seijaku" | "sakura" | "crimson" | "matcha" | "lavender" | "midnight";
+
+export const THEMES: { id: ThemeId; label: string; emoji: string; swatch: string }[] = [
+  { id: "seijaku", label: "Seijaku Blue", emoji: "🌊", swatch: "oklch(0.55 0.16 255)" },
+  { id: "sakura", label: "Sakura Pink", emoji: "🌸", swatch: "oklch(0.65 0.16 350)" },
+  { id: "crimson", label: "Crimson", emoji: "🍁", swatch: "oklch(0.55 0.19 25)" },
+  { id: "matcha", label: "Matcha", emoji: "🍵", swatch: "oklch(0.55 0.13 155)" },
+  { id: "lavender", label: "Lavender", emoji: "💜", swatch: "oklch(0.55 0.16 300)" },
+  { id: "midnight", label: "Midnight", emoji: "🌙", swatch: "oklch(0.72 0.12 265)" },
+];
+
 export type QuickLink = { id: string; label: string; url: string; icon?: string };
 
 export type TimerBackground = {
