@@ -61,8 +61,8 @@ export function TimerFullscreen({
     ? now.toLocaleTimeString(
         [],
         display.showSeconds
-          ? { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }
-          : { hour: "2-digit", minute: "2-digit", hour12: false },
+          ? { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: clockHour12 }
+          : { hour: "2-digit", minute: "2-digit", hour12: clockHour12 },
       )
     : "--:--";
   const dateStr = now ? now.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : "";
