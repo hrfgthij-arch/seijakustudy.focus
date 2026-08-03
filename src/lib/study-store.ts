@@ -324,8 +324,54 @@ function migrateSlot(s: any): PlannerSlot {
   };
 }
 
+function migrateEvent(e: any): PlannerEvent {
+  const start = typeof e?.start === "number" ? e.start : parseTimeToMinutes(String(e?.start ?? "08:00"));
+  const end = typeof e?.end === "number" ? e.end : start + 60;
+  return {
+    id: e?.id ?? Math.random().toString(36).slice(2, 10),
+    week: typeof e?.week === "string" ? e.week : "",
+    weekday: Number(e?.weekday ?? 0),
+    start,
+    end: Math.max(start + 15, end),
+    title: e?.title ?? "",
+    description: e?.description ?? "",
+    color: e?.color ?? "blue",
+    allDay: !!e?.allDay,
+    repeat: e?.repeat === "weekly" || e?.repeat === "weekdays" ? e.repeat : "none",
+    done: !!e?.done,
+  };
+}
+
+/** v7 planner slots (one hour label + subject chips) become one event each. */
+function slotsToEvents(slots: PlannerSlot[]): PlannerEvent[] {
+  const out: PlannerEvent[] = [];
+  for (const s of slots) {
+    const subjects = s.subjects?.length ? s.subjects : s.subject ? [s.subject] : [];
+    if (!subjects.length && !s.note) continue;
+    const start = parseTimeToMinutes(s.time);
+    out.push({
+      id: `mig-${s.id}`,
+      week: s.week ?? "",
+      weekday: s.weekday,
+      start,
+      end: Math.min(1440, start + 60),
+      title: subjects.join(", ") || "Study",
+      description: s.note ?? "",
+      color: "blue",
+      allDay: false,
+      repeat: "none",
+      done: false,
+    });
+  }
+  return out;
+}
+
 function normalizeState(parsed: any): State {
   const base = emptyState();
+  const plannerSlots: PlannerSlot[] = (parsed?.plannerSlots ?? []).map(migrateSlot);
+  const plannerEvents: PlannerEvent[] = Array.isArray(parsed?.plannerEvents)
+    ? parsed.plannerEvents.map(migrateEvent)
+    : slotsToEvents(plannerSlots);
   return {
     columns: parsed?.columns?.length ? parsed.columns : base.columns,
     rows: (parsed?.rows ?? []).map(migrateRow),
@@ -337,6 +383,8 @@ function normalizeState(parsed: any): State {
         Array.isArray(parsed?.settings?.timeRanges) && parsed.settings.timeRanges.length
           ? parsed.settings.timeRanges
           : base.settings.timeRanges,
+      timeFormat: parsed?.settings?.timeFormat === "24h" ? "24h" : "12h",
+      theme: THEMES.some((t) => t.id === parsed?.settings?.theme) ? parsed.settings.theme : base.settings.theme,
       timerDisplay: {
         ...base.settings.timerDisplay,
         ...(parsed?.settings?.timerDisplay ?? {}),
@@ -349,7 +397,8 @@ function normalizeState(parsed: any): State {
     },
     sleep: parsed?.sleep ?? [],
     todos: parsed?.todos ?? [],
-    plannerSlots: (parsed?.plannerSlots ?? []).map(migrateSlot),
+    plannerSlots,
+    plannerEvents,
     habits: parsed?.habits?.length ? parsed.habits : base.habits,
     quickLinks: Array.isArray(parsed?.quickLinks) ? parsed.quickLinks : [],
   };
