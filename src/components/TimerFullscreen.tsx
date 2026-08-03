@@ -35,6 +35,7 @@ export function TimerFullscreen({
   mm,
   ss,
 }: Props) {
+  const { settings } = useStudyStore();
   const [now, setNow] = useState<Date | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [customMin, setCustomMin] = useState("");
