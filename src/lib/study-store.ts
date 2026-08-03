@@ -274,6 +274,7 @@ export type State = {
   sleep: SleepEntry[];
   todos: Todo[];
   plannerSlots: PlannerSlot[];
+  plannerEvents: PlannerEvent[];
   habits: Habit[];
   quickLinks: QuickLink[];
 };
@@ -287,6 +288,7 @@ function emptyState(): State {
     sleep: [],
     todos: [],
     plannerSlots: [],
+    plannerEvents: [],
     habits: DEFAULT_HABITS,
     quickLinks: [],
   };
