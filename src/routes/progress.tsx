@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Donut } from "@/components/Donut";
-import { DEFAULT_TIME_RANGES, useStudyStore, type WeekStart } from "@/lib/study-store";
+import { useStudyStore, type WeekStart } from "@/lib/study-store";
 
 export const Route = createFileRoute("/progress")({
   head: () => ({
@@ -51,7 +51,7 @@ function currentStreak(dates: string[]) {
 }
 
 function ProgressPage() {
-  const { habits, plannerSlots, settings, hydrated } = useStudyStore();
+  const { habits, plannerEvents, settings, hydrated } = useStudyStore();
   const [weekOffset, setWeekOffset] = useState(0);
 
   const weekDates = useMemo(() => {
@@ -151,7 +151,7 @@ function ProgressPage() {
           </div>
           <div className="flex flex-wrap items-center justify-center gap-8">
             <Donut pct={overall.pct} size={132} stroke={12} label="Consistency" sublabel={`${overall.done}/${overall.total} ticks`} />
-            <Donut pct={coverage.pct} size={132} stroke={12} label="Planner filled" sublabel={`${coverage.filled}/${coverage.totalCells} slots`} />
+            <Donut pct={coverage.pct} size={132} stroke={12} label="Tasks done" sublabel={`${coverage.filled}/${coverage.totalCells} tasks`} />
           </div>
         </section>
 
