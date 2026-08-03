@@ -8,7 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { useStudyStore } from "@/lib/study-store";
+import { useStudyStore, THEMES, type ThemeId } from "@/lib/study-store";
 
 
 import appCss from "../styles.css?url";
@@ -115,6 +115,57 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function ThemePicker() {
+  const { settings, setSettings, hydrated } = useStudyStore();
+  const [open, setOpen] = useState(false);
+  const current = THEMES.find((t) => t.id === settings.theme) ?? THEMES[0];
+
+  useEffect(() => {
+    if (!hydrated) return;
+    document.documentElement.dataset.theme = settings.theme;
+  }, [settings.theme, hydrated]);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, [open]);
+
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Change theme"
+        title="Change theme"
+        className="inline-flex h-8 items-center gap-1 rounded-full border border-[color:var(--border)] bg-white px-2 text-xs font-semibold text-muted-foreground hover:border-primary hover:text-primary"
+      >
+        <span className="inline-block h-3 w-3 rounded-full" style={{ background: current.swatch }} />
+        <span className="hidden sm:inline">{current.emoji}</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 z-50 mt-1 w-44 overflow-hidden rounded-xl border border-[color:var(--border)] bg-white p-1 shadow-lg">
+          {THEMES.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => {
+                setSettings({ ...settings, theme: t.id as ThemeId });
+                setOpen(false);
+              }}
+              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold hover:bg-[color:var(--muted)] ${
+                t.id === settings.theme ? "text-primary" : "text-foreground"
+              }`}
+            >
+              <span className="inline-block h-3.5 w-3.5 shrink-0 rounded-full" style={{ background: t.swatch }} />
+              {t.emoji} {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NavBar() {
   const [signedIn, setSignedIn] = useState(false);
   const { settings, setSettings } = useStudyStore();
@@ -135,16 +186,17 @@ function NavBar() {
   }
 
   return (
-    <nav className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[color:var(--border)] bg-white/80 px-4 py-2 backdrop-blur md:px-6">
-      <div className="flex items-center gap-3 text-xs font-semibold">
-        <Link to="/" className="text-sm font-bold text-primary">🌿 Seijaku</Link>
-        <Link to="/planner" className="text-muted-foreground hover:text-primary" activeProps={{ className: "text-primary" }}>Planner</Link>
-        <Link to="/progress" className="text-muted-foreground hover:text-primary" activeProps={{ className: "text-primary" }}>Progress</Link>
-        <Link to="/todo" className="text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>To-do</Link>
-        <Link to="/links" className="text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>Links</Link>
-        <Link to="/sleep" className="text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>Sleep</Link>
+    <nav className="sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-[color:var(--border)] bg-white/80 px-3 py-2 backdrop-blur md:gap-3 md:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-x-auto text-xs font-semibold [scrollbar-width:none] md:gap-3">
+        <Link to="/" className="shrink-0 text-sm font-bold text-primary">🌿 Seijaku</Link>
+        <Link to="/planner" className="shrink-0 text-muted-foreground hover:text-primary" activeProps={{ className: "text-primary" }}>Planner</Link>
+        <Link to="/progress" className="shrink-0 text-muted-foreground hover:text-primary" activeProps={{ className: "text-primary" }}>Progress</Link>
+        <Link to="/todo" className="shrink-0 text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>To-do</Link>
+        <Link to="/links" className="shrink-0 text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>Links</Link>
+        <Link to="/sleep" className="shrink-0 text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>Sleep</Link>
       </div>
-      <div className="flex items-center gap-2 text-xs">
+      <div className="flex shrink-0 items-center gap-1.5 text-xs">
+        <ThemePicker />
         {signedIn ? (
           <>
             {editing ? (

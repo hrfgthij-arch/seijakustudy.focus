@@ -4,6 +4,7 @@ import {
   DEFAULT_TIMER_BACKGROUND,
   TIMER_BG_PRESETS,
   timerBackgroundStyle,
+  useStudyStore,
   type TimerDisplay,
 } from "@/lib/study-store";
 
@@ -35,6 +36,7 @@ export function TimerFullscreen({
   mm,
   ss,
 }: Props) {
+  const { settings } = useStudyStore();
   const [now, setNow] = useState<Date | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [customMin, setCustomMin] = useState("");
@@ -57,12 +59,13 @@ export function TimerFullscreen({
   if (!open || typeof document === "undefined") return null;
 
   const dark = display.theme === "dark";
+  const clockHour12 = (settings.timeFormat ?? "12h") === "12h";
   const timeStr = now
     ? now.toLocaleTimeString(
         [],
         display.showSeconds
-          ? { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }
-          : { hour: "2-digit", minute: "2-digit", hour12: false },
+          ? { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: clockHour12 }
+          : { hour: "2-digit", minute: "2-digit", hour12: clockHour12 },
       )
     : "--:--";
   const dateStr = now ? now.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : "";

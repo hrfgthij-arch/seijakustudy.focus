@@ -48,6 +48,82 @@ export type Habit = { id: string; label: string; dates: string[] };
 
 export type WeekStart = "sunday" | "monday";
 
+export type TimeFormat = "12h" | "24h";
+
+/** A Google-Calendar-style planner event. `start`/`end` are minutes from midnight. */
+export type PlannerEvent = {
+  id: string;
+  /** ISO date of the first day of the week this event belongs to. */
+  week: string;
+  weekday: number;
+  start: number;
+  end: number;
+  title: string;
+  description: string;
+  color: string;
+  allDay: boolean;
+  repeat: "none" | "weekly" | "weekdays";
+  done: boolean;
+};
+
+export const EVENT_COLORS: { id: string; label: string; css: string }[] = [
+  { id: "blue", label: "Blueberry", css: "oklch(0.58 0.15 258)" },
+  { id: "pink", label: "Flamingo", css: "oklch(0.68 0.15 355)" },
+  { id: "green", label: "Basil", css: "oklch(0.58 0.13 155)" },
+  { id: "amber", label: "Tangerine", css: "oklch(0.72 0.15 65)" },
+  { id: "purple", label: "Grape", css: "oklch(0.55 0.16 300)" },
+  { id: "red", label: "Tomato", css: "oklch(0.6 0.19 25)" },
+  { id: "teal", label: "Peacock", css: "oklch(0.62 0.11 205)" },
+  { id: "graphite", label: "Graphite", css: "oklch(0.55 0.02 250)" },
+];
+
+export function eventColorCss(id: string) {
+  return (EVENT_COLORS.find((c) => c.id === id) ?? EVENT_COLORS[0]).css;
+}
+
+/** 24 hour rows: 12 AM through 11 PM. */
+export const DAY_HOURS: number[] = Array.from({ length: 24 }, (_, i) => i);
+
+export function formatMinutes(mins: number, fmt: TimeFormat = "12h") {
+  const m = ((mins % 1440) + 1440) % 1440;
+  const h = Math.floor(m / 60);
+  const mm = String(m % 60).padStart(2, "0");
+  if (fmt === "24h") return `${String(h).padStart(2, "0")}:${mm}`;
+  const suffix = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${mm} ${suffix}`;
+}
+
+export function formatHourLabel(hour: number, fmt: TimeFormat = "12h") {
+  if (fmt === "24h") return `${String(hour).padStart(2, "0")}:00`;
+  const suffix = hour < 12 ? "AM" : "PM";
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h12} ${suffix}`;
+}
+
+/** "HH:MM" -> minutes; tolerant of "07:00–08:30" legacy labels. */
+export function parseTimeToMinutes(value: string): number {
+  const m = /(\d{1,2}):(\d{2})/.exec(value ?? "");
+  if (!m) return 8 * 60;
+  return Math.min(23 * 60 + 59, Number(m[1]) * 60 + Number(m[2]));
+}
+
+export function minutesToInput(mins: number) {
+  const m = ((mins % 1440) + 1440) % 1440;
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+
+export type ThemeId = "seijaku" | "sakura" | "crimson" | "matcha" | "lavender" | "midnight";
+
+export const THEMES: { id: ThemeId; label: string; emoji: string; swatch: string }[] = [
+  { id: "seijaku", label: "Seijaku Blue", emoji: "🌊", swatch: "oklch(0.55 0.16 255)" },
+  { id: "sakura", label: "Sakura Pink", emoji: "🌸", swatch: "oklch(0.65 0.16 350)" },
+  { id: "crimson", label: "Crimson", emoji: "🍁", swatch: "oklch(0.55 0.19 25)" },
+  { id: "matcha", label: "Matcha", emoji: "🍵", swatch: "oklch(0.55 0.13 155)" },
+  { id: "lavender", label: "Lavender", emoji: "💜", swatch: "oklch(0.55 0.16 300)" },
+  { id: "midnight", label: "Midnight", emoji: "🌙", swatch: "oklch(0.72 0.12 265)" },
+];
+
 export type QuickLink = { id: string; label: string; url: string; icon?: string };
 
 export type TimerBackground = {
@@ -82,6 +158,8 @@ export type Settings = {
   timerDisplay: TimerDisplay;
   spotifyUrl: string | null;
   showSpotify: boolean;
+  timeFormat: TimeFormat;
+  theme: ThemeId;
 };
 
 
@@ -136,6 +214,8 @@ export const DEFAULT_SETTINGS: Settings = {
   timerDisplay: DEFAULT_TIMER_DISPLAY,
   spotifyUrl: null,
   showSpotify: true,
+  timeFormat: "12h",
+  theme: "seijaku",
 };
 
 /** Resolve a timer background into inline style props. */
@@ -194,6 +274,7 @@ export type State = {
   sleep: SleepEntry[];
   todos: Todo[];
   plannerSlots: PlannerSlot[];
+  plannerEvents: PlannerEvent[];
   habits: Habit[];
   quickLinks: QuickLink[];
 };
@@ -207,6 +288,7 @@ function emptyState(): State {
     sleep: [],
     todos: [],
     plannerSlots: [],
+    plannerEvents: [],
     habits: DEFAULT_HABITS,
     quickLinks: [],
   };
@@ -242,8 +324,54 @@ function migrateSlot(s: any): PlannerSlot {
   };
 }
 
+function migrateEvent(e: any): PlannerEvent {
+  const start = typeof e?.start === "number" ? e.start : parseTimeToMinutes(String(e?.start ?? "08:00"));
+  const end = typeof e?.end === "number" ? e.end : start + 60;
+  return {
+    id: e?.id ?? Math.random().toString(36).slice(2, 10),
+    week: typeof e?.week === "string" ? e.week : "",
+    weekday: Number(e?.weekday ?? 0),
+    start,
+    end: Math.max(start + 15, end),
+    title: e?.title ?? "",
+    description: e?.description ?? "",
+    color: e?.color ?? "blue",
+    allDay: !!e?.allDay,
+    repeat: e?.repeat === "weekly" || e?.repeat === "weekdays" ? e.repeat : "none",
+    done: !!e?.done,
+  };
+}
+
+/** v7 planner slots (one hour label + subject chips) become one event each. */
+function slotsToEvents(slots: PlannerSlot[]): PlannerEvent[] {
+  const out: PlannerEvent[] = [];
+  for (const s of slots) {
+    const subjects = s.subjects?.length ? s.subjects : s.subject ? [s.subject] : [];
+    if (!subjects.length && !s.note) continue;
+    const start = parseTimeToMinutes(s.time);
+    out.push({
+      id: `mig-${s.id}`,
+      week: s.week ?? "",
+      weekday: s.weekday,
+      start,
+      end: Math.min(1440, start + 60),
+      title: subjects.join(", ") || "Study",
+      description: s.note ?? "",
+      color: "blue",
+      allDay: false,
+      repeat: "none",
+      done: false,
+    });
+  }
+  return out;
+}
+
 function normalizeState(parsed: any): State {
   const base = emptyState();
+  const plannerSlots: PlannerSlot[] = (parsed?.plannerSlots ?? []).map(migrateSlot);
+  const plannerEvents: PlannerEvent[] = Array.isArray(parsed?.plannerEvents)
+    ? parsed.plannerEvents.map(migrateEvent)
+    : slotsToEvents(plannerSlots);
   return {
     columns: parsed?.columns?.length ? parsed.columns : base.columns,
     rows: (parsed?.rows ?? []).map(migrateRow),
@@ -255,6 +383,8 @@ function normalizeState(parsed: any): State {
         Array.isArray(parsed?.settings?.timeRanges) && parsed.settings.timeRanges.length
           ? parsed.settings.timeRanges
           : base.settings.timeRanges,
+      timeFormat: parsed?.settings?.timeFormat === "24h" ? "24h" : "12h",
+      theme: THEMES.some((t) => t.id === parsed?.settings?.theme) ? parsed.settings.theme : base.settings.theme,
       timerDisplay: {
         ...base.settings.timerDisplay,
         ...(parsed?.settings?.timerDisplay ?? {}),
@@ -267,7 +397,8 @@ function normalizeState(parsed: any): State {
     },
     sleep: parsed?.sleep ?? [],
     todos: parsed?.todos ?? [],
-    plannerSlots: (parsed?.plannerSlots ?? []).map(migrateSlot),
+    plannerSlots,
+    plannerEvents,
     habits: parsed?.habits?.length ? parsed.habits : base.habits,
     quickLinks: Array.isArray(parsed?.quickLinks) ? parsed.quickLinks : [],
   };
@@ -303,7 +434,7 @@ const seedRows = (): Row[] => [
 
 
 function hasMeaningfulData(s: State) {
-  return s.rows.length > 0 || s.todos.length > 0 || s.plannerSlots.length > 0 || s.sleep.length > 0;
+  return s.rows.length > 0 || s.todos.length > 0 || s.plannerSlots.length > 0 || s.plannerEvents.length > 0 || s.sleep.length > 0;
 }
 
 const MERGE_RESOLVED_KEY = "sakura-merge-resolved-v1";
@@ -332,12 +463,14 @@ function hasExtraData(local: State, remote: State) {
     ...remote.rows.map((r) => r.id),
     ...remote.todos.map((t) => t.id),
     ...remote.plannerSlots.map((p) => p.id),
+    ...remote.plannerEvents.map((p) => p.id),
     ...remote.sleep.map((s) => s.id),
   ]);
   const localIds = [
     ...local.rows.map((r) => r.id),
     ...local.todos.map((t) => t.id),
     ...local.plannerSlots.map((p) => p.id),
+    ...local.plannerEvents.map((p) => p.id),
     ...local.sleep.map((s) => s.id),
   ];
   return localIds.some((id) => !ids.has(id));
@@ -556,12 +689,14 @@ export function useStudyStore() {
     const rowIds = new Set(cur.rows.map((r) => r.id));
     const todoIds = new Set(cur.todos.map((t) => t.id));
     const slotIds = new Set(cur.plannerSlots.map((s) => s.id));
+    const eventIds = new Set(cur.plannerEvents.map((e) => e.id));
     const sleepIds = new Set(cur.sleep.map((s) => s.id));
     const merged: State = {
       ...cur,
       rows: [...cur.rows, ...guestSnapshot.rows.filter((r) => !rowIds.has(r.id))],
       todos: [...cur.todos, ...guestSnapshot.todos.filter((t) => !todoIds.has(t.id))],
       plannerSlots: [...cur.plannerSlots, ...guestSnapshot.plannerSlots.filter((s) => !slotIds.has(s.id))],
+      plannerEvents: [...cur.plannerEvents, ...guestSnapshot.plannerEvents.filter((e) => !eventIds.has(e.id))],
       sleep: [...cur.sleep, ...guestSnapshot.sleep.filter((s) => !sleepIds.has(s.id))],
     };
     setSharedState(merged);
@@ -590,6 +725,7 @@ export function useStudyStore() {
     setSleep: setter("sleep"),
     setTodos: setter("todos"),
     setPlannerSlots: setter("plannerSlots"),
+    setPlannerEvents: setter("plannerEvents"),
     setHabits: setter("habits"),
     setQuickLinks: setter("quickLinks"),
     hydrated: isHydrated,

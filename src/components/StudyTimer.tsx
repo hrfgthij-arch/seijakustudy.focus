@@ -344,6 +344,8 @@ function TimerCard({ variant }: { variant: "full" | "sticky" }) {
 }
 
 export function ClockWidget() {
+  const { settings } = useStudyStore();
+  const hour12 = (settings.timeFormat ?? "12h") === "12h";
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     setNow(new Date());
@@ -352,7 +354,7 @@ export function ClockWidget() {
   }, []);
 
   const time = now
-    ? now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
+    ? now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12 })
     : "--:--";
   const date = now
     ? now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })

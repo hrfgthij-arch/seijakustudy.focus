@@ -1,48 +1,64 @@
-## My answers first
+## 1. Planner: full-day grid, no custom ranges
 
-**Name: "Seijaku Study".** It's distinctive, matches the calm/focus mood, and your published address is already `seijakustudy.lovable.app`. "Sakura Bloom" reads more generic-cute. I'd retitle the whole site to Seijaku Study (nav, page titles, meta descriptions) and keep the soft blue aesthetic.
+- Replace editable time-range rows with a fixed 24-row day grid: **12 AM → 11 PM** (every hour of the day).
+- Remove "Edit time ranges", "+ Row" and "Reset hours"; existing planned subjects are mapped onto the matching hour row so nothing is lost.
+- The grid scrolls vertically inside the card and defaults its scroll to ~7 AM so the useful part of the day is visible immediately.
+- A **12h / 24h toggle** in the planner header (and respected everywhere times show: planner, lessons table, sleep tracker, clock). Saved per user, default 12h.
 
-**Planner: multiple subjects + custom time ranges — not Google Calendar.** Google Calendar sync would need each user to connect their own Google account through an OAuth connector, only works for signed-in users, and pushes your planner into Google's data model (one event = one title, no habit ticks). Your planner data already syncs across devices through your own account, so Google adds account plumbing without adding much. Custom time ranges + multi-subject cells is fully under your control and works for guests too. (If you later want Calendar, it's best added as a one-way "export my week to Google" button rather than the source of truth.)
+## 2. Google-Calendar-style tasks in the planner
 
-## What I'll build
+Clicking a cell (or "+ Task") opens an event editor with:
 
-**1. Rename to Seijaku Study**
-Nav/brand, all route `head()` titles and descriptions (`index`, `progress`, `planner`, `todo`, `sleep`, `links`, `auth`), and on-page headings.
+- Title
+- Start and end time (so a task can span multiple hours, e.g. 7:00–8:30)
+- Date / day of the week
+- Description / notes
+- Colour label (a small palette, like Calendar's event colours)
+- All-day toggle
+- Repeat: none / every week / weekdays
+- Mark as done
 
-**2. Planner: custom time ranges + multi-subject cells**
+Calendar-like behaviours users actually like, added here:
 
-- Replace the fixed 06:00–20:00 hourly rows with editable time ranges (e.g. "07:00–08:30"), stored in settings; add / rename / delete / reorder rows, with a "reset to default hours" action.
-- Each cell holds multiple subject chips: type + Enter to add, ✕ to remove, plus a per-cell note. Existing single-subject slots migrate into the chip list automatically.
-- If the user swtiches to a new week it shows a freash new table ready to fill.
+- Events render as coloured blocks spanning their duration, not one-line chips.
+- **"Today" button + red current-time line** across the grid.
+- **Week / Day / Agenda views** — Week on desktop, Day + Agenda list on mobile.
+- Click an event to edit, drag-free resize handled through the editor for reliability.
+- Overlapping events sit side by side in the same hour.
+- Quick-add: type a title in a cell and press Enter to create a 1-hour event.
+- Weekly repeats appear automatically on every future week.
 
-**3. Spotify**
+The habit consistency table stays below, unchanged.
 
-- Header shows only "🎧 Spotify Player" — once a playlist is loaded, the paste box and the raw code are hidden behind a small "Change" toggle, so the embed alone is visible.
-- Spotify is desktop-only: removed from mobile rendering and from the mobile widgets menu.
+## 3. Mobile optimisation
 
-**4. Draggable timer pill**
-The running-timer pill becomes drag-and-drop anywhere on screen (pointer events, works with touch), clamped inside the viewport, position remembered locally, with a double-tap-to-recentre. Buttons stay clickable (drag only starts past a small movement threshold).
+- Correct viewport/scale so nothing renders zoomed-out or clipped.
+- Fluid type scale and tighter spacing under 640px; no horizontal page scroll anywhere.
+- Header, toolbars, and widget rows switch to the grid pattern that survives narrow widths (text truncates, icons stay fixed).
+- Stickers scale down and reposition so they never overlap content or crop.
+- Planner and lessons use list/agenda layouts on phones instead of wide tables.
+- Timer pill, dialogs, and menus sized for touch (min 44px targets).
 
-**5. Progress page = self-study planner progress only**  
-Replaces the lesson-subject donuts with:
+## 4. Themes
 
-- Overall week consistency donut (habit ticks completed ÷ habit×7).
-- One donut per habit for the current week, plus its streak.
-- A planner-coverage stat: how many planned slots this week have subjects filled in.
-- Week switcher (prev / this week / next) matching the planner's week-start setting.
-The lesson calendar/day list on that page is removed.
+A theme picker (in the widgets/settings menu) with several palettes:
 
-**6. Aesthetic pass (restrained)**
-Softer layered blue background with a subtle grain, one consistent card style (unified radius, border, hover lift), tighter type scale, calmer chip/badge colours, gentle transitions. No heavy animation, no clutter — stickers stay as they are, just spaced consistently.
+- **Seijaku Blue** (default), **Sakura Pink**, **Crimson Red**, **Matcha Green**, **Lavender**, **Midnight Dark**.
 
-Also fixing quietly: the hydration mismatch that logs an error on first load of the tracker page.
+Each theme retints background, cards, primary, accents, chips, and the planner event colours. Choice is saved with the user's account so it follows them across devices.
 
-## 7. Drag and drop columns on the lessons table
+## 5. Aesthetic pass
 
-The user can drag any column on the lessons table and rearrage it however they want.
+- Unified card style (radius, border, soft shadow, hover lift) across every page.
+- Calmer, more consistent chips/badges tied to the active theme.
+- Softer layered background gradient + subtle grain per theme.
+- Gentler transitions; no added clutter.
+
+### Order of work
+
+Planner (1 + 2) first and finished completely, then mobile scaling, then themes and the aesthetic pass.
 
 ### Technical notes
 
-- `study-store.ts` bumps to v7: `settings.timeRanges` becomes the planner's row source, `PlannerSlot.subjects: string[]` becomes canonical (v6 `subject` migrated in), plus a local-only stored timer pill position.
-- Timer pill drag lives in `StudyTimer.tsx` using pointer events; position kept in `localStorage`, not cloud state, so it doesn't churn sync.
-- Progress page reads `habits` + `plannerSlots` only; `subjectStats` stays exported for the tracker sidebar.
+- `study-store.ts` → v8: `settings.timeFormat: "12h" | "24h"`, `settings.theme`, and a new `PlannerEvent` type (`id, week, weekday, start, end, title, description, color, allDay, repeat, done`). v7 `PlannerSlot` subjects migrate into single-hour events. `timeRanges` is dropped from the UI but kept in the type for safe migration.
+- Themes implemented as `[data-theme="..."]` blocks in `src/styles.css` overriding the existing oklch tokens; `data-theme` set on `<html>` from settings. No hardcoded colours in components.
