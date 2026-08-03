@@ -57,6 +57,7 @@ export function TimerFullscreen({
   if (!open || typeof document === "undefined") return null;
 
   const dark = display.theme === "dark";
+  const clockHour12 = (settings.timeFormat ?? "12h") === "12h";
   const timeStr = now
     ? now.toLocaleTimeString(
         [],
