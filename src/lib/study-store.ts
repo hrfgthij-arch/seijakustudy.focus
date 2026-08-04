@@ -484,7 +484,32 @@ function slotsToEvents(slots: PlannerSlot[]): PlannerEvent[] {
   return out;
 }
 
+function migratePage(p: any): Page {
+  const now = new Date().toISOString();
+  const blocks: Block[] = Array.isArray(p?.blocks)
+    ? p.blocks.map((b: any) => ({
+        id: b?.id ?? uid(),
+        type: (b?.type ?? "text") as BlockType,
+        text: typeof b?.text === "string" ? b.text : "",
+        checked: !!b?.checked,
+        src: b?.src ?? undefined,
+        color: b?.color ?? undefined,
+      }))
+    : [newBlock("text", "")];
+  return {
+    id: p?.id ?? uid(),
+    icon: p?.icon ?? "📄",
+    title: typeof p?.title === "string" ? p.title : "Untitled",
+    cover: p?.cover ?? null,
+    blocks,
+    favourite: !!p?.favourite,
+    createdAt: p?.createdAt ?? now,
+    updatedAt: p?.updatedAt ?? now,
+  };
+}
+
 function normalizeState(parsed: any): State {
+
   const base = emptyState();
   const plannerSlots: PlannerSlot[] = (parsed?.plannerSlots ?? []).map(migrateSlot);
   const plannerEvents: PlannerEvent[] = Array.isArray(parsed?.plannerEvents)
