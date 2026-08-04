@@ -1,64 +1,68 @@
-## 1. Planner: full-day grid, no custom ranges
+# Notion-ish customisation, Google Calendar sync, and a Settings hub
 
-- Replace editable time-range rows with a fixed 24-row day grid: **12 AM → 11 PM** (every hour of the day).
-- Remove "Edit time ranges", "+ Row" and "Reset hours"; existing planned subjects are mapped onto the matching hour row so nothing is lost.
-- The grid scrolls vertically inside the card and defaults its scroll to ~7 AM so the useful part of the day is visible immediately.
-- A **12h / 24h toggle** in the planner header (and respected everywhere times show: planner, lessons table, sleep tracker, clock). Saved per user, default 12h.
+## 1. Custom pages ("Spaces")
 
-## 2. Google-Calendar-style tasks in the planner
+A new **Pages** section in the nav where you create your own pages — Notion-inspired, but lighter and still Seijaku-shaped.
 
-Clicking a cell (or "+ Task") opens an event editor with:
+- Sidebar list of your pages: emoji icon, title, rename, duplicate, delete, drag to reorder, favourite.
+- Each page is a stack of blocks. Press `/` in an empty block to open a block menu:
+  - Heading 1/2/3, plain text, bullet list, numbered list, to-do checkbox
+  - Quote, callout (with emoji + theme colour), divider, code, image (upload or URL), simple table
+  - **Embed blocks unique to this app**: study timer, to-do list, quick links, a subject progress donut, planner-week summary
+- Inline formatting: bold, italic, underline, strikethrough, highlight, link — via a small selection toolbar plus keyboard shortcuts.
+- Drag-handle on hover to reorder or delete a block; Enter makes a new block, Backspace merges.
+- Per-page cover image and emoji icon, plus a "full width" toggle.
+- Everything saves to your account like the rest of the app, so pages follow you across devices.
 
-- Title
-- Start and end time (so a task can span multiple hours, e.g. 7:00–8:30)
-- Date / day of the week
-- Description / notes
-- Colour label (a small palette, like Calendar's event colours)
-- All-day toggle
-- Repeat: none / every week / weekdays
-- Mark as done
+Deliberately *not* Notion: no nested databases, no relations, no multi-level page tree (one flat list with favourites), no sharing/permissions.
 
-Calendar-like behaviours users actually like, added here:
+## 2. Settings page
 
-- Events render as coloured blocks spanning their duration, not one-line chips.
-- **"Today" button + red current-time line** across the grid.
-- **Week / Day / Agenda views** — Week on desktop, Day + Agenda list on mobile.
-- Click an event to edit, drag-free resize handled through the editor for reliability.
-- Overlapping events sit side by side in the same hour.
-- Quick-add: type a title in a cell and press Enter to create a 1-hour event.
-- Weekly repeats appear automatically on every future week.
+One explorable `/settings` page with sections (quick theme picker stays in the nav):
 
-The habit consistency table stays below, unchanged.
+- **Appearance** — theme palettes, light/soft/contrast density, card corner style, background grain/gradient toggle, sticker visibility & count.
+- **Time & week** — 12h/24h, week starts Sunday/Monday, default planner view (week/day/agenda).
+- **Widgets** — show/hide timer, to-do, quick links, sleep, Spotify, PDF, banner (replaces the scattered menus, which keep working).
+- **Lessons** — columns, max columns, priority levels editor, "important only" default.
+- **Integrations** — Google Calendar connect/disconnect and sync status.
+- **Data** — export everything as JSON, import back, clear local cache, sign out.
+- Small discoverable extras: keyboard-shortcut sheet, and a few playful toggles (confetti on completing a task, sticker mood) to reward exploring.
 
-## 3. Mobile optimisation
+## 3. Google Calendar two-way sync
 
-- Correct viewport/scale so nothing renders zoomed-out or clipped.
-- Fluid type scale and tighter spacing under 640px; no horizontal page scroll anywhere.
-- Header, toolbars, and widget rows switch to the grid pattern that survives narrow widths (text truncates, icons stay fixed).
-- Stickers scale down and reposition so they never overlap content or crop.
-- Planner and lessons use list/agenda layouts on phones instead of wide tables.
-- Timer pill, dialogs, and menus sized for touch (min 44px targets).
+Each user links **their own** Google account (not a shared one).
 
-## 4. Themes
+- "Connect Google Calendar" in Settings → Integrations opens a Google consent popup.
+- Choose which calendar to sync (default: primary).
+- **Pull**: Google events for the visible week appear in the planner grid with their Google colour and a small Google badge.
+- **Push**: tasks you create/edit/delete in the planner are mirrored to the linked Google calendar (title, time range, description, colour, weekly/weekday repeat).
+- A stored link between each planner event and its Google event id prevents duplicates; "Sync now" button plus automatic refresh when you change week.
+- Conflicts resolve last-write-wins, with the timestamp shown in Settings.
+- Disconnecting stops syncing and leaves existing events in place.
 
-A theme picker (in the widgets/settings menu) with several palettes:
+Note: this needs a Google OAuth client configured once for the app — I'll open the setup card when we build it.
 
-- **Seijaku Blue** (default), **Sakura Pink**, **Crimson Red**, **Matcha Green**, **Lavender**, **Midnight Dark**.
+## 4. Planner: to-do in the sidebar
 
-Each theme retints background, cards, primary, accents, chips, and the planner event colours. Choice is saved with the user's account so it follows them across devices.
+- Desktop: planner becomes grid + right-hand column holding the to-do list (and a compact "today's events" list under it); collapsible.
+- Mobile: to-do appears as a sheet from a button in the planner header, keeping the day view full-width.
+- Checking a planner task off can optionally add it to the to-do list and vice versa (toggle in Settings).
 
-## 5. Aesthetic pass
+## 5. Fluid task popups
 
-- Unified card style (radius, border, soft shadow, hover lift) across every page.
-- Calmer, more consistent chips/badges tied to the active theme.
-- Softer layered background gradient + subtle grain per theme.
-- Gentler transitions; no added clutter.
+- Replace the abrupt task dialog with a spring-eased popover that grows from the clicked cell/event on desktop, and a draggable bottom sheet on mobile.
+- Events animate in/out (fade + scale), moving/resizing tweens instead of snapping, hover lift on blocks.
+- Backdrop blurs gently; Esc and swipe-down close; focus is trapped and restored.
+- Motion respects `prefers-reduced-motion`.
 
 ### Order of work
 
-Planner (1 + 2) first and finished completely, then mobile scaling, then themes and the aesthetic pass.
+Pages editor → Settings page → planner sidebar + fluid popups → Google Calendar sync last (it needs the OAuth setup step).
 
 ### Technical notes
 
-- `study-store.ts` → v8: `settings.timeFormat: "12h" | "24h"`, `settings.theme`, and a new `PlannerEvent` type (`id, week, weekday, start, end, title, description, color, allDay, repeat, done`). v7 `PlannerSlot` subjects migrate into single-hour events. `timeRanges` is dropped from the UI but kept in the type for safe migration.
-- Themes implemented as `[data-theme="..."]` blocks in `src/styles.css` overriding the existing oklch tokens; `data-theme` set on `<html>` from settings. No hardcoded colours in components.
+- Store → v9: `pages: Page[]` (`id, icon, title, cover, blocks: Block[], favourite, order, fullWidth, createdAt/updatedAt`), `settings.appearance`, `settings.weekStart` surfaced in settings, `settings.integrations.google`.
+- Block editor built in-house with contentEditable-free controlled inputs (one component per block type) to avoid heavy dependencies and keep SSR-safe.
+- Google Calendar uses the per-user App User Connector for `google_calendar`; the connection key is stored encrypted server-side and all Google API calls happen in server functions — never in the browser.
+- Sync mapping stored on each `PlannerEvent` as `googleEventId` + `googleUpdatedAt`.
+- Animations via CSS transitions/keyframes and a small spring utility; no new animation library.
