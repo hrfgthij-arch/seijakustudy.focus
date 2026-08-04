@@ -511,7 +511,9 @@ function normalizeState(parsed: any): State {
           ...(parsed?.settings?.timerDisplay?.background ?? {}),
         },
       },
-
+      appearance: { ...base.settings.appearance, ...(parsed?.settings?.appearance ?? {}) },
+      googleCalendar: { ...base.settings.googleCalendar, ...(parsed?.settings?.googleCalendar ?? {}) },
+      plannerTodos: parsed?.settings?.plannerTodos !== false,
     },
     sleep: parsed?.sleep ?? [],
     todos: parsed?.todos ?? [],
@@ -519,8 +521,10 @@ function normalizeState(parsed: any): State {
     plannerEvents,
     habits: parsed?.habits?.length ? parsed.habits : base.habits,
     quickLinks: Array.isArray(parsed?.quickLinks) ? parsed.quickLinks : [],
+    pages: Array.isArray(parsed?.pages) ? parsed.pages.map(migratePage) : [],
   };
 }
+
 
 function loadLocal(): State | null {
   if (typeof window === "undefined") return null;
