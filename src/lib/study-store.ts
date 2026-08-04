@@ -64,7 +64,13 @@ export type PlannerEvent = {
   allDay: boolean;
   repeat: "none" | "weekly" | "weekdays";
   done: boolean;
+  /** Set when this event is mirrored to the user's Google Calendar. */
+  googleEventId?: string | null;
+  googleUpdatedAt?: string | null;
+  /** True for events pulled from Google that were not created here. */
+  fromGoogle?: boolean;
 };
+
 
 export const EVENT_COLORS: { id: string; label: string; css: string }[] = [
   { id: "blue", label: "Blueberry", css: "oklch(0.58 0.15 258)" },
@@ -142,6 +148,102 @@ export type TimerDisplay = {
   background: TimerBackground;
 };
 
+/** ---- Custom pages ("Spaces") ---- */
+export type BlockType =
+  | "text"
+  | "h1"
+  | "h2"
+  | "h3"
+  | "bullet"
+  | "todo"
+  | "quote"
+  | "callout"
+  | "divider"
+  | "image"
+  | "widget";
+
+export type Block = {
+  id: string;
+  type: BlockType;
+  text: string;
+  checked?: boolean;
+  /** For image blocks: a data URL or link. For widget blocks: the widget id. */
+  src?: string;
+  color?: string;
+};
+
+export type Page = {
+  id: string;
+  icon: string;
+  title: string;
+  cover: string | null;
+  blocks: Block[];
+  favourite: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const PAGE_WIDGETS: { id: string; label: string; emoji: string }[] = [
+  { id: "timer", label: "Study timer", emoji: "⏳" },
+  { id: "todos", label: "To-do list", emoji: "📝" },
+  { id: "progress", label: "Subject progress", emoji: "🍩" },
+  { id: "today", label: "Today's plan", emoji: "🗓️" },
+  { id: "quicklinks", label: "Quick links", emoji: "🔗" },
+];
+
+export function newBlock(type: BlockType = "text", text = ""): Block {
+  return { id: uid(), type, text };
+}
+
+export function newPage(title = "Untitled"): Page {
+  const now = new Date().toISOString();
+  return {
+    id: uid(),
+    icon: "📄",
+    title,
+    cover: null,
+    blocks: [newBlock("text", "")],
+    favourite: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export type Density = "compact" | "cozy" | "roomy";
+export type Corners = "sharp" | "soft" | "round";
+
+export type Appearance = {
+  density: Density;
+  corners: Corners;
+  grain: boolean;
+  stickers: boolean;
+  animations: boolean;
+  fontScale: number;
+};
+
+export const DEFAULT_APPEARANCE: Appearance = {
+  density: "cozy",
+  corners: "soft",
+  grain: true,
+  stickers: true,
+  animations: true,
+  fontScale: 1,
+};
+
+export type GoogleCalendarSettings = {
+  connected: boolean;
+  calendarId: string;
+  autoSync: boolean;
+  lastSyncAt: string | null;
+};
+
+export const DEFAULT_GOOGLE_CALENDAR: GoogleCalendarSettings = {
+  connected: false,
+  calendarId: "primary",
+  autoSync: true,
+  lastSyncAt: null,
+};
+
 export type Settings = {
   bannerImage: string | null;
   pdfUrl: string | null;
@@ -160,7 +262,12 @@ export type Settings = {
   showSpotify: boolean;
   timeFormat: TimeFormat;
   theme: ThemeId;
+  appearance: Appearance;
+  googleCalendar: GoogleCalendarSettings;
+  /** Show the to-do list beside the planner grid on desktop. */
+  plannerTodos: boolean;
 };
+
 
 
 export const DEFAULT_COLUMNS: Column[] = [
@@ -216,7 +323,11 @@ export const DEFAULT_SETTINGS: Settings = {
   showSpotify: true,
   timeFormat: "12h",
   theme: "seijaku",
+  appearance: DEFAULT_APPEARANCE,
+  googleCalendar: DEFAULT_GOOGLE_CALENDAR,
+  plannerTodos: true,
 };
+
 
 /** Resolve a timer background into inline style props. */
 export function timerBackgroundStyle(bg?: TimerBackground): React.CSSProperties {
@@ -277,6 +388,7 @@ export type State = {
   plannerEvents: PlannerEvent[];
   habits: Habit[];
   quickLinks: QuickLink[];
+  pages: Page[];
 };
 
 function emptyState(): State {
@@ -291,8 +403,10 @@ function emptyState(): State {
     plannerEvents: [],
     habits: DEFAULT_HABITS,
     quickLinks: [],
+    pages: [],
   };
 }
+
 
 function migrateRow(r: any): Row {
   return {
@@ -339,7 +453,11 @@ function migrateEvent(e: any): PlannerEvent {
     allDay: !!e?.allDay,
     repeat: e?.repeat === "weekly" || e?.repeat === "weekdays" ? e.repeat : "none",
     done: !!e?.done,
+    googleEventId: e?.googleEventId ?? null,
+    googleUpdatedAt: e?.googleUpdatedAt ?? null,
+    fromGoogle: !!e?.fromGoogle,
   };
+
 }
 
 /** v7 planner slots (one hour label + subject chips) become one event each. */
@@ -366,7 +484,32 @@ function slotsToEvents(slots: PlannerSlot[]): PlannerEvent[] {
   return out;
 }
 
+function migratePage(p: any): Page {
+  const now = new Date().toISOString();
+  const blocks: Block[] = Array.isArray(p?.blocks)
+    ? p.blocks.map((b: any) => ({
+        id: b?.id ?? uid(),
+        type: (b?.type ?? "text") as BlockType,
+        text: typeof b?.text === "string" ? b.text : "",
+        checked: !!b?.checked,
+        src: b?.src ?? undefined,
+        color: b?.color ?? undefined,
+      }))
+    : [newBlock("text", "")];
+  return {
+    id: p?.id ?? uid(),
+    icon: p?.icon ?? "📄",
+    title: typeof p?.title === "string" ? p.title : "Untitled",
+    cover: p?.cover ?? null,
+    blocks,
+    favourite: !!p?.favourite,
+    createdAt: p?.createdAt ?? now,
+    updatedAt: p?.updatedAt ?? now,
+  };
+}
+
 function normalizeState(parsed: any): State {
+
   const base = emptyState();
   const plannerSlots: PlannerSlot[] = (parsed?.plannerSlots ?? []).map(migrateSlot);
   const plannerEvents: PlannerEvent[] = Array.isArray(parsed?.plannerEvents)
@@ -393,7 +536,9 @@ function normalizeState(parsed: any): State {
           ...(parsed?.settings?.timerDisplay?.background ?? {}),
         },
       },
-
+      appearance: { ...base.settings.appearance, ...(parsed?.settings?.appearance ?? {}) },
+      googleCalendar: { ...base.settings.googleCalendar, ...(parsed?.settings?.googleCalendar ?? {}) },
+      plannerTodos: parsed?.settings?.plannerTodos !== false,
     },
     sleep: parsed?.sleep ?? [],
     todos: parsed?.todos ?? [],
@@ -401,8 +546,10 @@ function normalizeState(parsed: any): State {
     plannerEvents,
     habits: parsed?.habits?.length ? parsed.habits : base.habits,
     quickLinks: Array.isArray(parsed?.quickLinks) ? parsed.quickLinks : [],
+    pages: Array.isArray(parsed?.pages) ? parsed.pages.map(migratePage) : [],
   };
 }
+
 
 function loadLocal(): State | null {
   if (typeof window === "undefined") return null;
@@ -698,6 +845,11 @@ export function useStudyStore() {
       plannerSlots: [...cur.plannerSlots, ...guestSnapshot.plannerSlots.filter((s) => !slotIds.has(s.id))],
       plannerEvents: [...cur.plannerEvents, ...guestSnapshot.plannerEvents.filter((e) => !eventIds.has(e.id))],
       sleep: [...cur.sleep, ...guestSnapshot.sleep.filter((s) => !sleepIds.has(s.id))],
+      pages: [
+        ...cur.pages,
+        ...guestSnapshot.pages.filter((p) => !new Set(cur.pages.map((x) => x.id)).has(p.id)),
+      ],
+
     };
     setSharedState(merged);
     if (currentUserRef.current) markMergeResolved(currentUserRef.current);
@@ -728,6 +880,8 @@ export function useStudyStore() {
     setPlannerEvents: setter("plannerEvents"),
     setHabits: setter("habits"),
     setQuickLinks: setter("quickLinks"),
+    setPages: setter("pages"),
+
     hydrated: isHydrated,
     userId,
     guestSnapshot,

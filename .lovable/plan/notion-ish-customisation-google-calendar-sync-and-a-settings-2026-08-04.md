@@ -5,10 +5,13 @@
 A new **Pages** section in the nav where you create your own pages — Notion-inspired, but lighter and still Seijaku-shaped.
 
 - Sidebar list of your pages: emoji icon, title, rename, duplicate, delete, drag to reorder, favourite.
-- Each page is a stack of blocks. Press `/` in an empty block to open a block menu:
-  - Heading 1/2/3, plain text, bullet list, numbered list, to-do checkbox
-  - Quote, callout (with emoji + theme colour), divider, code, image (upload or URL), simple table
-  - **Embed blocks unique to this app**: study timer, to-do list, quick links, a subject progress donut, planner-week summary
+
+Each page is a stack of blocks. Press ; in an empty block to open a block menu:
+
+- Heading 1/2/3, plain text, bullet list, numbered list, to-do checkbox
+- Quote, callout (with emoji + theme colour), divider, code, image (upload or URL), simple table
+- **Embed blocks unique to this app**: study timer, to-do list, quick links, a subject progress donut, planner-week summary
+
 - Inline formatting: bold, italic, underline, strikethrough, highlight, link — via a small selection toolbar plus keyboard shortcuts.
 - Drag-handle on hover to reorder or delete a block; Enter makes a new block, Backspace merges.
 - Per-page cover image and emoji icon, plus a "full width" toggle.
