@@ -64,7 +64,13 @@ export type PlannerEvent = {
   allDay: boolean;
   repeat: "none" | "weekly" | "weekdays";
   done: boolean;
+  /** Set when this event is mirrored to the user's Google Calendar. */
+  googleEventId?: string | null;
+  googleUpdatedAt?: string | null;
+  /** True for events pulled from Google that were not created here. */
+  fromGoogle?: boolean;
 };
+
 
 export const EVENT_COLORS: { id: string; label: string; css: string }[] = [
   { id: "blue", label: "Blueberry", css: "oklch(0.58 0.15 258)" },
