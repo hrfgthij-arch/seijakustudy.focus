@@ -148,6 +148,102 @@ export type TimerDisplay = {
   background: TimerBackground;
 };
 
+/** ---- Custom pages ("Spaces") ---- */
+export type BlockType =
+  | "text"
+  | "h1"
+  | "h2"
+  | "h3"
+  | "bullet"
+  | "todo"
+  | "quote"
+  | "callout"
+  | "divider"
+  | "image"
+  | "widget";
+
+export type Block = {
+  id: string;
+  type: BlockType;
+  text: string;
+  checked?: boolean;
+  /** For image blocks: a data URL or link. For widget blocks: the widget id. */
+  src?: string;
+  color?: string;
+};
+
+export type Page = {
+  id: string;
+  icon: string;
+  title: string;
+  cover: string | null;
+  blocks: Block[];
+  favourite: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const PAGE_WIDGETS: { id: string; label: string; emoji: string }[] = [
+  { id: "timer", label: "Study timer", emoji: "⏳" },
+  { id: "todos", label: "To-do list", emoji: "📝" },
+  { id: "progress", label: "Subject progress", emoji: "🍩" },
+  { id: "today", label: "Today's plan", emoji: "🗓️" },
+  { id: "quicklinks", label: "Quick links", emoji: "🔗" },
+];
+
+export function newBlock(type: BlockType = "text", text = ""): Block {
+  return { id: uid(), type, text };
+}
+
+export function newPage(title = "Untitled"): Page {
+  const now = new Date().toISOString();
+  return {
+    id: uid(),
+    icon: "📄",
+    title,
+    cover: null,
+    blocks: [newBlock("text", "")],
+    favourite: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export type Density = "compact" | "cozy" | "roomy";
+export type Corners = "sharp" | "soft" | "round";
+
+export type Appearance = {
+  density: Density;
+  corners: Corners;
+  grain: boolean;
+  stickers: boolean;
+  animations: boolean;
+  fontScale: number;
+};
+
+export const DEFAULT_APPEARANCE: Appearance = {
+  density: "cozy",
+  corners: "soft",
+  grain: true,
+  stickers: true,
+  animations: true,
+  fontScale: 1,
+};
+
+export type GoogleCalendarSettings = {
+  connected: boolean;
+  calendarId: string;
+  autoSync: boolean;
+  lastSyncAt: string | null;
+};
+
+export const DEFAULT_GOOGLE_CALENDAR: GoogleCalendarSettings = {
+  connected: false,
+  calendarId: "primary",
+  autoSync: true,
+  lastSyncAt: null,
+};
+
 export type Settings = {
   bannerImage: string | null;
   pdfUrl: string | null;
@@ -166,7 +262,12 @@ export type Settings = {
   showSpotify: boolean;
   timeFormat: TimeFormat;
   theme: ThemeId;
+  appearance: Appearance;
+  googleCalendar: GoogleCalendarSettings;
+  /** Show the to-do list beside the planner grid on desktop. */
+  plannerTodos: boolean;
 };
+
 
 
 export const DEFAULT_COLUMNS: Column[] = [
