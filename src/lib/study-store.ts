@@ -845,6 +845,11 @@ export function useStudyStore() {
       plannerSlots: [...cur.plannerSlots, ...guestSnapshot.plannerSlots.filter((s) => !slotIds.has(s.id))],
       plannerEvents: [...cur.plannerEvents, ...guestSnapshot.plannerEvents.filter((e) => !eventIds.has(e.id))],
       sleep: [...cur.sleep, ...guestSnapshot.sleep.filter((s) => !sleepIds.has(s.id))],
+      pages: [
+        ...cur.pages,
+        ...guestSnapshot.pages.filter((p) => !new Set(cur.pages.map((x) => x.id)).has(p.id)),
+      ],
+
     };
     setSharedState(merged);
     if (currentUserRef.current) markMergeResolved(currentUserRef.current);
