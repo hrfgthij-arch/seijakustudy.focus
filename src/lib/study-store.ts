@@ -453,7 +453,11 @@ function migrateEvent(e: any): PlannerEvent {
     allDay: !!e?.allDay,
     repeat: e?.repeat === "weekly" || e?.repeat === "weekdays" ? e.repeat : "none",
     done: !!e?.done,
+    googleEventId: e?.googleEventId ?? null,
+    googleUpdatedAt: e?.googleUpdatedAt ?? null,
+    fromGoogle: !!e?.fromGoogle,
   };
+
 }
 
 /** v7 planner slots (one hour label + subject chips) become one event each. */
