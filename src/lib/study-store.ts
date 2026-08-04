@@ -323,7 +323,11 @@ export const DEFAULT_SETTINGS: Settings = {
   showSpotify: true,
   timeFormat: "12h",
   theme: "seijaku",
+  appearance: DEFAULT_APPEARANCE,
+  googleCalendar: DEFAULT_GOOGLE_CALENDAR,
+  plannerTodos: true,
 };
+
 
 /** Resolve a timer background into inline style props. */
 export function timerBackgroundStyle(bg?: TimerBackground): React.CSSProperties {
