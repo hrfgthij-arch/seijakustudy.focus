@@ -388,6 +388,7 @@ export type State = {
   plannerEvents: PlannerEvent[];
   habits: Habit[];
   quickLinks: QuickLink[];
+  pages: Page[];
 };
 
 function emptyState(): State {
@@ -402,8 +403,10 @@ function emptyState(): State {
     plannerEvents: [],
     habits: DEFAULT_HABITS,
     quickLinks: [],
+    pages: [],
   };
 }
+
 
 function migrateRow(r: any): Row {
   return {
