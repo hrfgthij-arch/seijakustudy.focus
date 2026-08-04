@@ -105,7 +105,7 @@ function WidgetBlock({ id }: { id: string }) {
           <div className="flex flex-wrap gap-4">
             {stats.map((s) => (
               <div key={s.subject} className="flex flex-col items-center gap-1">
-                <Donut value={s.pct} size={62} />
+                <Donut pct={s.pct} size={62} />
                 <span className="max-w-[80px] truncate text-[11px] font-semibold text-muted-foreground">{s.subject}</span>
               </div>
             ))}
