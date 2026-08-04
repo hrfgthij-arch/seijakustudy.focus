@@ -880,6 +880,8 @@ export function useStudyStore() {
     setPlannerEvents: setter("plannerEvents"),
     setHabits: setter("habits"),
     setQuickLinks: setter("quickLinks"),
+    setPages: setter("pages"),
+
     hydrated: isHydrated,
     userId,
     guestSnapshot,
