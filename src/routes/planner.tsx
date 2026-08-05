@@ -405,7 +405,7 @@ function PlannerPage() {
                             <button
                               key={occ.key}
                               onClick={() => setEditing({ event: occ.event, isNew: false })}
-                              className="absolute overflow-hidden rounded-md px-1.5 py-0.5 text-left text-white shadow-sm ring-1 ring-black/5 transition-transform hover:z-20 hover:scale-[1.01]"
+                              className="event-chip animate-pop-in absolute overflow-hidden rounded-md px-1.5 py-0.5 text-left text-white shadow-sm ring-1 ring-black/5"
                               style={{
                                 top,
                                 height,
@@ -667,8 +667,8 @@ function EventDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-[color:var(--border)] bg-white p-4 shadow-xl sm:rounded-2xl">
+    <div className="animate-veil-in fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="animate-sheet-up max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-[color:var(--border)] bg-white p-4 shadow-xl sm:rounded-2xl">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-bold text-foreground">{isNew ? "New task" : "Edit task"}</h3>
           <button onClick={onCancel} className="text-sm text-muted-foreground hover:text-destructive" aria-label="Close">
