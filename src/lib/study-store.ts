@@ -142,6 +142,92 @@ export type TimerDisplay = {
   background: TimerBackground;
 };
 
+/** Notion-lite custom pages. */
+export type BlockType =
+  | "h1"
+  | "h2"
+  | "h3"
+  | "text"
+  | "bullet"
+  | "todo"
+  | "quote"
+  | "callout"
+  | "divider"
+  | "code"
+  | "table"
+  | "link"
+  | "image"
+  | "pdf"
+  | "spotify";
+
+export type Block = {
+  id: string;
+  type: BlockType;
+  text: string;
+  checked?: boolean;
+  emoji?: string;
+  color?: string;
+  url?: string;
+  cells?: string[][];
+};
+
+export type Page = {
+  id: string;
+  title: string;
+  icon: string;
+  cover: string | null;
+  blocks: Block[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const BLOCK_MENU: { type: BlockType; label: string; emoji: string; hint: string }[] = [
+  { type: "text", label: "Text", emoji: "¶", hint: "Plain paragraph" },
+  { type: "h1", label: "Heading 1", emoji: "H₁", hint: "Big section title" },
+  { type: "h2", label: "Heading 2", emoji: "H₂", hint: "Section title" },
+  { type: "h3", label: "Heading 3", emoji: "H₃", hint: "Small title" },
+  { type: "bullet", label: "Bulleted list", emoji: "•", hint: "One idea per line" },
+  { type: "todo", label: "Checklist", emoji: "☑", hint: "Tickable task" },
+  { type: "quote", label: "Quote", emoji: "❝", hint: "Highlight a line" },
+  { type: "callout", label: "Callout", emoji: "💡", hint: "Emoji + tinted box" },
+  { type: "code", label: "Code", emoji: "‹›", hint: "Monospace block" },
+  { type: "divider", label: "Divider", emoji: "―", hint: "Section break" },
+  { type: "table", label: "Table", emoji: "▦", hint: "Editable grid" },
+  { type: "link", label: "Link card", emoji: "🔗", hint: "Bookmark a URL" },
+  { type: "image", label: "Image", emoji: "🖼", hint: "Paste an image URL" },
+  { type: "pdf", label: "PDF embed", emoji: "📄", hint: "Embed a PDF" },
+  { type: "spotify", label: "Spotify", emoji: "🎧", hint: "Embed a playlist" },
+];
+
+export const CALLOUT_COLORS = ["blue", "pink", "green", "amber", "purple"] as const;
+
+/** Look-and-feel knobs exposed in the Settings hub. */
+export type Appearance = {
+  accent: "theme" | "sky" | "rose" | "amber" | "violet" | "emerald";
+  font: "fredoka" | "quicksand" | "serif" | "mono";
+  density: "cosy" | "compact";
+  radius: "round" | "soft" | "sharp";
+  pattern: "none" | "dots" | "grid" | "stars";
+  stickers: boolean;
+  stickerPack: "all" | "anime" | "genshin" | "secret";
+  animations: boolean;
+};
+
+export const DEFAULT_APPEARANCE: Appearance = {
+  accent: "theme",
+  font: "fredoka",
+  density: "cosy",
+  radius: "round",
+  pattern: "none",
+  stickers: true,
+  stickerPack: "all",
+  animations: true,
+};
+
+export type Unlocks = { secretStickers: boolean; logoTaps: number };
+
+export const DEFAULT_UNLOCKS: Unlocks = { secretStickers: false, logoTaps: 0 };
+
 export type Settings = {
   bannerImage: string | null;
   pdfUrl: string | null;
@@ -160,7 +246,11 @@ export type Settings = {
   showSpotify: boolean;
   timeFormat: TimeFormat;
   theme: ThemeId;
+  showPlannerTodo: boolean;
+  appearance: Appearance;
+  unlocks: Unlocks;
 };
+
 
 
 export const DEFAULT_COLUMNS: Column[] = [
@@ -216,7 +306,11 @@ export const DEFAULT_SETTINGS: Settings = {
   showSpotify: true,
   timeFormat: "12h",
   theme: "seijaku",
+  showPlannerTodo: true,
+  appearance: DEFAULT_APPEARANCE,
+  unlocks: DEFAULT_UNLOCKS,
 };
+
 
 /** Resolve a timer background into inline style props. */
 export function timerBackgroundStyle(bg?: TimerBackground): React.CSSProperties {
@@ -277,6 +371,7 @@ export type State = {
   plannerEvents: PlannerEvent[];
   habits: Habit[];
   quickLinks: QuickLink[];
+  pages: Page[];
 };
 
 function emptyState(): State {
@@ -291,8 +386,58 @@ function emptyState(): State {
     plannerEvents: [],
     habits: DEFAULT_HABITS,
     quickLinks: [],
+    pages: [],
   };
 }
+
+export function emptyBlock(type: BlockType = "text"): Block {
+  const b: Block = { id: uid(), type, text: "" };
+  if (type === "callout") {
+    b.emoji = "💡";
+    b.color = "blue";
+  }
+  if (type === "table") b.cells = [["", ""], ["", ""]];
+  return b;
+}
+
+export function emptyPage(): Page {
+  const now = new Date().toISOString();
+  return {
+    id: uid(),
+    title: "Untitled page",
+    icon: "📄",
+    cover: null,
+    blocks: [emptyBlock("text")],
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function migrateBlock(b: any): Block {
+  const type: BlockType = BLOCK_MENU.some((m) => m.type === b?.type) ? b.type : "text";
+  const out: Block = { id: b?.id ?? uid(), type, text: typeof b?.text === "string" ? b.text : "" };
+  if (typeof b?.checked === "boolean") out.checked = b.checked;
+  if (typeof b?.emoji === "string") out.emoji = b.emoji;
+  if (typeof b?.color === "string") out.color = b.color;
+  if (typeof b?.url === "string") out.url = b.url;
+  if (Array.isArray(b?.cells)) out.cells = b.cells.map((r: any) => (Array.isArray(r) ? r.map((c: any) => String(c ?? "")) : [""]));
+  if (type === "table" && !out.cells) out.cells = [["", ""], ["", ""]];
+  return out;
+}
+
+function migratePage(p: any): Page {
+  const now = new Date().toISOString();
+  return {
+    id: p?.id ?? uid(),
+    title: typeof p?.title === "string" ? p.title : "Untitled page",
+    icon: typeof p?.icon === "string" && p.icon ? p.icon : "📄",
+    cover: typeof p?.cover === "string" ? p.cover : null,
+    blocks: Array.isArray(p?.blocks) ? p.blocks.map(migrateBlock) : [emptyBlock("text")],
+    createdAt: typeof p?.createdAt === "string" ? p.createdAt : now,
+    updatedAt: typeof p?.updatedAt === "string" ? p.updatedAt : now,
+  };
+}
+
 
 function migrateRow(r: any): Row {
   return {
@@ -393,7 +538,8 @@ function normalizeState(parsed: any): State {
           ...(parsed?.settings?.timerDisplay?.background ?? {}),
         },
       },
-
+      appearance: { ...base.settings.appearance, ...(parsed?.settings?.appearance ?? {}) },
+      unlocks: { ...base.settings.unlocks, ...(parsed?.settings?.unlocks ?? {}) },
     },
     sleep: parsed?.sleep ?? [],
     todos: parsed?.todos ?? [],
@@ -401,7 +547,9 @@ function normalizeState(parsed: any): State {
     plannerEvents,
     habits: parsed?.habits?.length ? parsed.habits : base.habits,
     quickLinks: Array.isArray(parsed?.quickLinks) ? parsed.quickLinks : [],
+    pages: Array.isArray(parsed?.pages) ? parsed.pages.map(migratePage) : [],
   };
+
 }
 
 function loadLocal(): State | null {
@@ -698,6 +846,11 @@ export function useStudyStore() {
       plannerSlots: [...cur.plannerSlots, ...guestSnapshot.plannerSlots.filter((s) => !slotIds.has(s.id))],
       plannerEvents: [...cur.plannerEvents, ...guestSnapshot.plannerEvents.filter((e) => !eventIds.has(e.id))],
       sleep: [...cur.sleep, ...guestSnapshot.sleep.filter((s) => !sleepIds.has(s.id))],
+      pages: [
+        ...cur.pages,
+        ...guestSnapshot.pages.filter((p) => !new Set(cur.pages.map((x) => x.id)).has(p.id)),
+      ],
+
     };
     setSharedState(merged);
     if (currentUserRef.current) markMergeResolved(currentUserRef.current);
@@ -728,6 +881,8 @@ export function useStudyStore() {
     setPlannerEvents: setter("plannerEvents"),
     setHabits: setter("habits"),
     setQuickLinks: setter("quickLinks"),
+    setPages: setter("pages"),
+
     hydrated: isHydrated,
     userId,
     guestSnapshot,

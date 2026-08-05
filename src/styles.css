@@ -372,3 +372,110 @@ html, body { max-width: 100%; overflow-x: hidden; }
   html { -webkit-text-size-adjust: 100%; }
   input, select, textarea { font-size: 16px; }
 }
+
+/* ---------------------------------------------------------------
+ * Appearance knobs (Settings hub). Applied as data-* on <html>.
+ * --------------------------------------------------------------- */
+
+[data-accent="sky"]    { --primary: oklch(0.6 0.14 230); --ring: oklch(0.66 0.13 230); }
+[data-accent="rose"]   { --primary: oklch(0.62 0.17 5);   --ring: oklch(0.68 0.16 5); }
+[data-accent="amber"]  { --primary: oklch(0.68 0.14 70);  --ring: oklch(0.74 0.13 70); }
+[data-accent="violet"] { --primary: oklch(0.55 0.18 295); --ring: oklch(0.62 0.16 295); }
+[data-accent="emerald"]{ --primary: oklch(0.55 0.12 165); --ring: oklch(0.62 0.11 165); }
+
+[data-radius="soft"]  { --radius: 0.5rem; }
+[data-radius="sharp"] { --radius: 0.125rem; }
+[data-radius="sharp"] .rounded-2xl,
+[data-radius="sharp"] .rounded-xl { border-radius: 0.25rem; }
+[data-radius="sharp"] .rounded-full { border-radius: 0.375rem; }
+[data-radius="soft"] .rounded-2xl { border-radius: 0.75rem; }
+
+[data-font="quicksand"] h1, [data-font="quicksand"] h2, [data-font="quicksand"] h3 {
+  font-family: 'Quicksand', ui-sans-serif, system-ui, sans-serif;
+}
+[data-font="serif"] body, [data-font="serif"] { font-family: Georgia, 'Times New Roman', serif; }
+[data-font="serif"] h1, [data-font="serif"] h2, [data-font="serif"] h3 { font-family: Georgia, serif; }
+[data-font="mono"] body, [data-font="mono"] { font-family: ui-monospace, 'JetBrains Mono', 'Courier New', monospace; }
+[data-font="mono"] h1, [data-font="mono"] h2, [data-font="mono"] h3 { font-family: ui-monospace, monospace; letter-spacing: -0.02em; }
+
+[data-density="compact"] { font-size: 15px; }
+@media (min-width: 768px) {
+  [data-density="compact"] main { padding-top: 1.5rem; padding-bottom: 2rem; }
+}
+
+[data-pattern="dots"] body::after,
+[data-pattern="grid"] body::after,
+[data-pattern="stars"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.5;
+}
+[data-pattern="dots"] body::after {
+  background-image: radial-gradient(color-mix(in oklab, var(--primary) 22%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+[data-pattern="grid"] body::after {
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--primary) 12%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklab, var(--primary) 12%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+[data-pattern="stars"] body::after {
+  background-image:
+    radial-gradient(1.5px 1.5px at 20% 30%, color-mix(in oklab, var(--primary) 45%, transparent), transparent),
+    radial-gradient(1.5px 1.5px at 70% 60%, color-mix(in oklab, var(--primary) 35%, transparent), transparent),
+    radial-gradient(1px 1px at 45% 80%, color-mix(in oklab, var(--primary) 40%, transparent), transparent);
+  background-size: 180px 180px;
+}
+
+/* ---------------------------------------------------------------
+ * Fluid task motion (planner)
+ * --------------------------------------------------------------- */
+
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.94) translateY(8px); }
+  60% { opacity: 1; transform: scale(1.015) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes sheet-up {
+  from { opacity: 0; transform: translateY(28px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes veil-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes now-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+@utility animate-pop-in { animation: pop-in 0.34s cubic-bezier(0.22, 1.2, 0.36, 1) both; }
+@utility animate-sheet-up { animation: sheet-up 0.3s cubic-bezier(0.22, 1.15, 0.36, 1) both; }
+@utility animate-veil-in { animation: veil-in 0.2s ease-out both; }
+@utility animate-now-pulse { animation: now-pulse 2.4s ease-in-out infinite; }
+
+@utility event-chip {
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.event-chip:hover {
+  transform: translateY(-1px) scale(1.012);
+  box-shadow: 0 10px 22px -12px oklch(0.2 0.05 260 / 0.5);
+  z-index: 20;
+}
+.event-chip:active { transform: scale(0.985); }
+
+[data-animations="off"] * {
+  animation-duration: 0.001ms !important;
+  transition-duration: 0.001ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+

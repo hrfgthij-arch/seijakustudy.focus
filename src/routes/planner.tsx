@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { TodoList } from "@/components/TodoList";
+
 import {
   DAY_HOURS,
   EVENT_COLORS,
@@ -215,7 +217,9 @@ function PlannerPage() {
 
   return (
     <main className="min-h-screen px-3 py-6 sm:px-4 md:px-10 md:py-12">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-5">
+        <div className="min-w-0">
+
         <header className="mb-5 flex flex-col gap-3">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
             <div className="min-w-0">
@@ -401,7 +405,7 @@ function PlannerPage() {
                             <button
                               key={occ.key}
                               onClick={() => setEditing({ event: occ.event, isNew: false })}
-                              className="absolute overflow-hidden rounded-md px-1.5 py-0.5 text-left text-white shadow-sm ring-1 ring-black/5 transition-transform hover:z-20 hover:scale-[1.01]"
+                              className="event-chip animate-pop-in absolute overflow-hidden rounded-md px-1.5 py-0.5 text-left text-white shadow-sm ring-1 ring-black/5"
                               style={{
                                 top,
                                 height,
@@ -526,7 +530,14 @@ function PlannerPage() {
             </table>
           </div>
         </section>
+        </div>
+        {settings.showPlannerTodo && (
+          <aside className="mt-5 hidden lg:sticky lg:top-16 lg:mt-0 lg:block">
+            <TodoList compact />
+          </aside>
+        )}
       </div>
+
 
       {editing && (
         <EventDialog
@@ -656,8 +667,8 @@ function EventDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-[color:var(--border)] bg-white p-4 shadow-xl sm:rounded-2xl">
+    <div className="animate-veil-in fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="animate-sheet-up max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-[color:var(--border)] bg-white p-4 shadow-xl sm:rounded-2xl">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-bold text-foreground">{isNew ? "New task" : "Edit task"}</h3>
           <button onClick={onCancel} className="text-sm text-muted-foreground hover:text-destructive" aria-label="Close">
