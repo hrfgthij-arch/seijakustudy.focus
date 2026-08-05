@@ -1,64 +1,47 @@
-## 1. Planner: full-day grid, no custom ranges
+# Seijaku Study — Notion-style customization
 
-- Replace editable time-range rows with a fixed 24-row day grid: **12 AM → 11 PM** (every hour of the day).
-- Remove "Edit time ranges", "+ Row" and "Reset hours"; existing planned subjects are mapped onto the matching hour row so nothing is lost.
-- The grid scrolls vertically inside the card and defaults its scroll to ~7 AM so the useful part of the day is visible immediately.
-- A **12h / 24h toggle** in the planner header (and respected everywhere times show: planner, lessons table, sleep tracker, clock). Saved per user, default 12h.
+Keep the current structure (tracker, planner, progress, sleep, links) and layer on a Settings hub, custom pages, a planner-side to-do list, and smoother task animations.
 
-## 2. Google-Calendar-style tasks in the planner
+## 1. Settings hub (`/settings`)
 
-Clicking a cell (or "+ Task") opens an event editor with:
+One page reachable from a gear in the nav, grouped into tabs:
 
-- Title
-- Start and end time (so a task can span multiple hours, e.g. 7:00–8:30)
-- Date / day of the week
-- Description / notes
-- Colour label (a small palette, like Calendar's event colours)
-- All-day toggle
-- Repeat: none / every week / weekdays
-- Mark as done
+- **Appearance** — theme picker (existing 6 themes) plus accent tint, font choice (Fredoka / Quicksand / serif / mono), UI density (cosy / compact), corner roundness, background pattern, stickers on/off and sticker pack choice.
+- **Preferences** — display name, 12h/24h, week start (Sun/Mon), default planner view, "important lessons only" default.
+- **Widgets** — master list of every widget (timer, sleep, Spotify, quick links, PDF, banner, to-do) with show/hide switches; the existing Widgets dropdown stays as a shortcut.
+- **Lessons** — column manager (rename/reorder/remove, 8 max) and the priority manager, moved here.
+- **Data** — export JSON, import JSON, reset local data, sign-in state.
+- **Fun extras** — a small "secrets" card: click the sprout logo 5 times to unlock a hidden sticker pack + confetti toast; a random daily encouragement line; an unlockable "focus streak" badge.
 
-Calendar-like behaviours users actually like, added here:
+Everything saves into the existing settings object in the study store (bumped to v9 with defaults for the new keys) so it syncs to the account.
 
-- Events render as coloured blocks spanning their duration, not one-line chips.
-- **"Today" button + red current-time line** across the grid.
-- **Week / Day / Agenda views** — Week on desktop, Day + Agenda list on mobile.
-- Click an event to edit, drag-free resize handled through the editor for reliability.
-- Overlapping events sit side by side in the same hour.
-- Quick-add: type a title in a cell and press Enter to create a 1-hour event.
-- Weekly repeats appear automatically on every future week.
+## 2. Custom pages (Notion-lite)
 
-The habit consistency table stays below, unchanged.
+New routes: `/pages` (list of user pages, create / rename / emoji icon / delete) and `/pages/$pageId` (the editor).
 
-## 3. Mobile optimisation
+A page is a list of blocks, rendered top to bottom, each added from a `+` menu and reorderable by drag:
 
-- Correct viewport/scale so nothing renders zoomed-out or clipped.
-- Fluid type scale and tighter spacing under 640px; no horizontal page scroll anywhere.
-- Header, toolbars, and widget rows switch to the grid pattern that survives narrow widths (text truncates, icons stay fixed).
-- Stickers scale down and reposition so they never overlap content or crop.
-- Planner and lessons use list/agenda layouts on phones instead of wide tables.
-- Timer pill, dialogs, and menus sized for touch (min 44px targets).
+- Heading (H1/H2/H3), paragraph text, bulleted list, checklist, quote, callout (with emoji + colour), divider, code
+- Simple table (add/remove rows and columns, editable cells)
+- Embeds: link card, image / sticker, PDF (reuses the PDF widget), Spotify (reuses the Spotify player)
 
-## 4. Themes
+Editing is inline and click-to-edit — no slash-command grammar, no databases, no nested pages. Each block gets a hover handle for drag, duplicate, delete. Pages appear in the nav under a "Pages" entry and are stored in the study store so they sync and work for guests.
 
-A theme picker (in the widgets/settings menu) with several palettes:
+## 3. Planner: to-do sidebar
 
-- **Seijaku Blue** (default), **Sakura Pink**, **Crimson Red**, **Matcha Green**, **Lavender**, **Midnight Dark**.
+On desktop the planner gets a right-hand column with the existing `TodoList`, sticky under the header, hideable from the Widgets dropdown. On mobile it stays on the `/todo` page (unchanged). The planner grid shrinks to accommodate it without breaking the hour rows.
 
-Each theme retints background, cards, primary, accents, chips, and the planner event colours. Choice is saved with the user's account so it follows them across devices.
+## 4. Fluid task pop-ups
 
-## 5. Aesthetic pass
+- Event dialog opens with a scale + fade spring transition instead of an instant swap, closes in reverse, and on mobile slides up as a sheet.
+- Event blocks animate in when created, pulse gently on save, and fade out on delete.
+- Hovering an event lifts it slightly with a soft shadow; the current-time line pulses.
+- All motion respects `prefers-reduced-motion`.
 
-- Unified card style (radius, border, soft shadow, hover lift) across every page.
-- Calmer, more consistent chips/badges tied to the active theme.
-- Softer layered background gradient + subtle grain per theme.
-- Gentler transitions; no added clutter.
+## Technical notes
 
-### Order of work
-
-Planner (1 + 2) first and finished completely, then mobile scaling, then themes and the aesthetic pass.
-
-### Technical notes
-
-- `study-store.ts` → v8: `settings.timeFormat: "12h" | "24h"`, `settings.theme`, and a new `PlannerEvent` type (`id, week, weekday, start, end, title, description, color, allDay, repeat, done`). v7 `PlannerSlot` subjects migrate into single-hour events. `timeRanges` is dropped from the UI but kept in the type for safe migration.
-- Themes implemented as `[data-theme="..."]` blocks in `src/styles.css` overriding the existing oklch tokens; `data-theme` set on `<html>` from settings. No hardcoded colours in components.
+- Store `v9`: add `settings.appearance` (accent, font, density, radius, pattern, stickerPack, stickersOn), `settings.unlocks`, and a `pages: Page[]` collection with `blocks: Block[]`; migration keeps all v8 data intact.
+- Appearance options apply as `data-*` attributes on `<html>` plus CSS variables in `src/styles.css` — no hardcoded colour classes.
+- New files: `src/routes/settings.tsx`, `src/routes/pages.index.tsx`, `src/routes/pages.$pageId.tsx`, `src/components/blocks/*`, `src/components/SettingsSection.tsx`.
+- Animations via CSS transitions/keyframes on existing components (no new animation dependency).
+- Each new route gets its own `head()` metadata.
