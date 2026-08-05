@@ -122,8 +122,19 @@ function ThemePicker() {
 
   useEffect(() => {
     if (!hydrated) return;
-    document.documentElement.dataset.theme = settings.theme;
-  }, [settings.theme, hydrated]);
+    const el = document.documentElement;
+    el.dataset.theme = settings.theme;
+    const a = settings.appearance;
+    if (a) {
+      el.dataset.accent = a.accent;
+      el.dataset.font = a.font;
+      el.dataset.density = a.density;
+      el.dataset.radius = a.radius;
+      el.dataset.pattern = a.pattern;
+      el.dataset.animations = a.animations ? "on" : "off";
+    }
+  }, [settings.theme, settings.appearance, hydrated]);
+
 
   useEffect(() => {
     if (!open) return;
@@ -191,12 +202,24 @@ function NavBar() {
         <Link to="/" className="shrink-0 text-sm font-bold text-primary">🌿 Seijaku</Link>
         <Link to="/planner" className="shrink-0 text-muted-foreground hover:text-primary" activeProps={{ className: "text-primary" }}>Planner</Link>
         <Link to="/progress" className="shrink-0 text-muted-foreground hover:text-primary" activeProps={{ className: "text-primary" }}>Progress</Link>
+        <Link to="/pages" className="shrink-0 text-muted-foreground hover:text-primary" activeProps={{ className: "text-primary" }}>Pages</Link>
         <Link to="/todo" className="shrink-0 text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>To-do</Link>
         <Link to="/links" className="shrink-0 text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>Links</Link>
         <Link to="/sleep" className="shrink-0 text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>Sleep</Link>
+
       </div>
       <div className="flex shrink-0 items-center gap-1.5 text-xs">
+        <Link
+          to="/settings"
+          title="Settings"
+          aria-label="Settings"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--border)] bg-white text-sm text-muted-foreground transition-transform hover:rotate-45 hover:border-primary hover:text-primary"
+          activeProps={{ className: "text-primary border-primary" }}
+        >
+          ⚙️
+        </Link>
         <ThemePicker />
+
         {signedIn ? (
           <>
             {editing ? (

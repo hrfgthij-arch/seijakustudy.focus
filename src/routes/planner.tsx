@@ -215,7 +215,9 @@ function PlannerPage() {
 
   return (
     <main className="min-h-screen px-3 py-6 sm:px-4 md:px-10 md:py-12">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-5">
+        <div className="min-w-0">
+
         <header className="mb-5 flex flex-col gap-3">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
             <div className="min-w-0">
@@ -526,7 +528,14 @@ function PlannerPage() {
             </table>
           </div>
         </section>
+        </div>
+        {settings.showPlannerTodo && (
+          <aside className="mt-5 hidden lg:sticky lg:top-16 lg:mt-0 lg:block">
+            <TodoList compact />
+          </aside>
+        )}
       </div>
+
 
       {editing && (
         <EventDialog

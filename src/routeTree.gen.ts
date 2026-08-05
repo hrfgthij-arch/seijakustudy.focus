@@ -11,11 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TodoRouteImport } from './routes/todo'
 import { Route as SleepRouteImport } from './routes/sleep'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as PlannerRouteImport } from './routes/planner'
 import { Route as LinksRouteImport } from './routes/links'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PagesIndexRouteImport } from './routes/pages.index'
+import { Route as PagesPageIdRouteImport } from './routes/pages.$pageId'
 
 const TodoRoute = TodoRouteImport.update({
   id: '/todo',
@@ -25,6 +28,11 @@ const TodoRoute = TodoRouteImport.update({
 const SleepRoute = SleepRouteImport.update({
   id: '/sleep',
   path: '/sleep',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProgressRoute = ProgressRouteImport.update({
@@ -52,6 +60,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PagesIndexRoute = PagesIndexRouteImport.update({
+  id: '/pages/',
+  path: '/pages/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagesPageIdRoute = PagesPageIdRouteImport.update({
+  id: '/pages/$pageId',
+  path: '/pages/$pageId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -59,8 +77,11 @@ export interface FileRoutesByFullPath {
   '/links': typeof LinksRoute
   '/planner': typeof PlannerRoute
   '/progress': typeof ProgressRoute
+  '/settings': typeof SettingsRoute
   '/sleep': typeof SleepRoute
   '/todo': typeof TodoRoute
+  '/pages/$pageId': typeof PagesPageIdRoute
+  '/pages/': typeof PagesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -68,8 +89,11 @@ export interface FileRoutesByTo {
   '/links': typeof LinksRoute
   '/planner': typeof PlannerRoute
   '/progress': typeof ProgressRoute
+  '/settings': typeof SettingsRoute
   '/sleep': typeof SleepRoute
   '/todo': typeof TodoRoute
+  '/pages/$pageId': typeof PagesPageIdRoute
+  '/pages': typeof PagesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -78,8 +102,11 @@ export interface FileRoutesById {
   '/links': typeof LinksRoute
   '/planner': typeof PlannerRoute
   '/progress': typeof ProgressRoute
+  '/settings': typeof SettingsRoute
   '/sleep': typeof SleepRoute
   '/todo': typeof TodoRoute
+  '/pages/$pageId': typeof PagesPageIdRoute
+  '/pages/': typeof PagesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -89,10 +116,23 @@ export interface FileRouteTypes {
     | '/links'
     | '/planner'
     | '/progress'
+    | '/settings'
     | '/sleep'
     | '/todo'
+    | '/pages/$pageId'
+    | '/pages/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/links' | '/planner' | '/progress' | '/sleep' | '/todo'
+  to:
+    | '/'
+    | '/auth'
+    | '/links'
+    | '/planner'
+    | '/progress'
+    | '/settings'
+    | '/sleep'
+    | '/todo'
+    | '/pages/$pageId'
+    | '/pages'
   id:
     | '__root__'
     | '/'
@@ -100,8 +140,11 @@ export interface FileRouteTypes {
     | '/links'
     | '/planner'
     | '/progress'
+    | '/settings'
     | '/sleep'
     | '/todo'
+    | '/pages/$pageId'
+    | '/pages/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -110,8 +153,11 @@ export interface RootRouteChildren {
   LinksRoute: typeof LinksRoute
   PlannerRoute: typeof PlannerRoute
   ProgressRoute: typeof ProgressRoute
+  SettingsRoute: typeof SettingsRoute
   SleepRoute: typeof SleepRoute
   TodoRoute: typeof TodoRoute
+  PagesPageIdRoute: typeof PagesPageIdRoute
+  PagesIndexRoute: typeof PagesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -128,6 +174,13 @@ declare module '@tanstack/react-router' {
       path: '/sleep'
       fullPath: '/sleep'
       preLoaderRoute: typeof SleepRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/progress': {
@@ -165,6 +218,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pages/': {
+      id: '/pages/'
+      path: '/pages'
+      fullPath: '/pages/'
+      preLoaderRoute: typeof PagesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pages/$pageId': {
+      id: '/pages/$pageId'
+      path: '/pages/$pageId'
+      fullPath: '/pages/$pageId'
+      preLoaderRoute: typeof PagesPageIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -174,19 +241,12 @@ const rootRouteChildren: RootRouteChildren = {
   LinksRoute: LinksRoute,
   PlannerRoute: PlannerRoute,
   ProgressRoute: ProgressRoute,
+  SettingsRoute: SettingsRoute,
   SleepRoute: SleepRoute,
   TodoRoute: TodoRoute,
+  PagesPageIdRoute: PagesPageIdRoute,
+  PagesIndexRoute: PagesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
