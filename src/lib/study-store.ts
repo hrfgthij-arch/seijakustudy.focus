@@ -399,6 +399,9 @@ export const DEFAULT_SETTINGS: Settings = {
   showPlannerTodo: true,
   appearance: DEFAULT_APPEARANCE,
   unlocks: DEFAULT_UNLOCKS,
+  tutorialSeen: false,
+  focusGoal: 120,
+
 };
 
 
