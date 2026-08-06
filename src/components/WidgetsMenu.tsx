@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { openTutorial } from "@/components/Tutorial";
+
 
 export type WidgetToggle = {
   id: string;
