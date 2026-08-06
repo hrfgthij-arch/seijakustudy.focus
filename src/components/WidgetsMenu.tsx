@@ -59,7 +59,18 @@ export function WidgetsMenu({ toggles }: { toggles: WidgetToggle[] }) {
               </span>
             </button>
           ))}
+          <div className="my-1 border-t border-[color:var(--border)]" />
+          <button
+            onClick={() => {
+              setOpen(false);
+              openTutorial();
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-primary hover:bg-primary/10"
+          >
+            📖 How to use this website
+          </button>
         </div>
+
       )}
     </div>
   );
