@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { emptyPage, useStudyStore } from "@/lib/study-store";
 
@@ -81,9 +82,13 @@ function rid() {
 
 function PagesIndex() {
   const { pages, setPages, hydrated } = useStudyStore();
+  const [q, setQ] = useState("");
+  const filtered = pages
+    .filter((p) => (p.title || "Untitled page").toLowerCase().includes(q.trim().toLowerCase()))
+    .sort((a, b) => Number(!!b.favorite) - Number(!!a.favorite));
 
   return (
-    <main className="min-h-screen px-4 py-8 md:px-10 md:py-12">
+    <main className="paper-canvas min-h-screen px-4 py-8 md:px-10 md:py-12">
       <div className="mx-auto max-w-4xl">
         <header className="mb-6">
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary shadow-sm">
@@ -95,6 +100,13 @@ function PagesIndex() {
             Free-form pages for notes, plans and anything else — built from blocks you can drag around.
           </p>
         </header>
+
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search pages…"
+          className="mb-6 w-full rounded-xl border border-[color:var(--paper-border)] bg-white/70 px-3 py-2 text-sm outline-none focus:border-primary"
+        />
 
         <section className="mb-8">
           <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Start from</h2>
@@ -112,13 +124,13 @@ function PagesIndex() {
           </div>
         </section>
 
-        {!hydrated ? null : pages.length === 0 ? (
+        {!hydrated ? null : filtered.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-[color:var(--border)] px-4 py-10 text-center text-sm text-muted-foreground">
             No pages yet — pick a template above to make your first one 🌱
           </p>
         ) : (
           <ul className="grid gap-2 sm:grid-cols-2">
-            {pages.map((p) => (
+            {filtered.map((p) => (
               <li key={p.id} className="group relative">
                 <Link
                   to="/pages/$pageId"
@@ -126,6 +138,7 @@ function PagesIndex() {
                   className="block rounded-2xl border border-[color:var(--border)] bg-white/85 p-4 shadow-sm transition-transform hover:-translate-y-0.5 hover:border-primary"
                 >
                   <span className="text-2xl">{p.icon}</span>
+                  {p.favorite && <span className="ml-1 text-xs text-primary">★</span>}
                   <span className="mt-1 block truncate text-sm font-bold text-foreground">{p.title || "Untitled page"}</span>
                   <span className="block text-[11px] text-muted-foreground">
                     {p.blocks.length} block{p.blocks.length === 1 ? "" : "s"} · edited{" "}

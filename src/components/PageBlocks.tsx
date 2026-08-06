@@ -54,9 +54,11 @@ function spotifyEmbed(raw: string) {
 export function BlockView({
   block,
   onChange,
+  index = 1,
 }: {
   block: Block;
   onChange: (patch: Partial<Block>) => void;
+  index?: number;
 }) {
   const set = (patch: Partial<Block>) => onChange(patch);
 
@@ -76,6 +78,55 @@ export function BlockView({
           <AutoText value={block.text} onChange={(text) => set({ text })} placeholder="List item" className="text-sm leading-relaxed text-foreground" />
         </div>
       );
+    case "numbered":
+      return (
+        <div className="flex gap-2">
+          <span className="mt-0.5 w-5 shrink-0 select-none text-right text-sm font-semibold text-primary">{index}.</span>
+          <AutoText value={block.text} onChange={(text) => set({ text })} placeholder="List item" className="text-sm leading-relaxed text-foreground" />
+        </div>
+      );
+    case "toggle":
+      return (
+        <div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => set({ open: !block.open })}
+              aria-label={block.open ? "Collapse" : "Expand"}
+              className="mt-0.5 select-none text-xs text-muted-foreground hover:text-primary"
+            >
+              {block.open ? "▾" : "▸"}
+            </button>
+            <AutoText
+              value={block.text}
+              onChange={(text) => set({ text })}
+              placeholder="Toggle title"
+              className="text-sm font-semibold leading-relaxed text-foreground"
+            />
+          </div>
+          {block.open && (
+            <div className="ml-4 mt-1 border-l border-[color:var(--border)] pl-3">
+              <BlockList blocks={block.children ?? []} onChange={(children) => set({ children })} nested />
+            </div>
+          )}
+        </div>
+      );
+    case "columns": {
+      const cols = block.cols ?? [[], []];
+      return (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {cols.map((col, i) => (
+            <div key={i} className="rounded-xl border border-dashed border-[color:var(--border)] p-2">
+              <BlockList
+                blocks={col}
+                nested
+                onChange={(next) => set({ cols: cols.map((c, j) => (i === j ? next : c)) })}
+              />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     case "todo":
       return (
         <div className="flex gap-2">
@@ -296,9 +347,11 @@ export function AddBlockMenu({ onAdd, label = "+ Add a block" }: { onAdd: (type:
 export function BlockList({
   blocks,
   onChange,
+  nested = false,
 }: {
   blocks: Block[];
   onChange: (next: Block[]) => void;
+  nested?: boolean;
 }) {
   const [dragId, setDragId] = useState<string | null>(null);
 
@@ -334,7 +387,7 @@ export function BlockList({
 
   return (
     <div className="space-y-1">
-      {blocks.map((b) => (
+      {blocks.map((b, i) => (
         <div
           key={b.id}
           onDragOver={(e) => e.preventDefault()}
@@ -354,7 +407,11 @@ export function BlockList({
               ⠿
             </span>
             <div className="min-w-0 flex-1">
-              <BlockView block={b} onChange={(p) => patch(b.id, p)} />
+              <BlockView
+                block={b}
+                index={blocks.slice(0, i + 1).filter((x) => x.type === "numbered").length}
+                onChange={(p) => patch(b.id, p)}
+              />
             </div>
             <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
               <button onClick={() => insertAfter(b.id, "text")} title="Add block below" className="rounded px-1 text-xs text-muted-foreground hover:text-primary">
@@ -370,8 +427,8 @@ export function BlockList({
           </div>
         </div>
       ))}
-      <div className="pt-2">
-        <AddBlockMenu onAdd={(t) => insertAfter(null, t)} />
+      <div className={nested ? "pt-1" : "pt-2"}>
+        <AddBlockMenu onAdd={(t) => insertAfter(null, t)} label={nested ? "+ Block" : "+ Add a block"} />
       </div>
     </div>
   );

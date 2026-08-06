@@ -149,12 +149,15 @@ export type BlockType =
   | "h3"
   | "text"
   | "bullet"
+  | "numbered"
   | "todo"
+  | "toggle"
   | "quote"
   | "callout"
   | "divider"
   | "code"
   | "table"
+  | "columns"
   | "link"
   | "image"
   | "pdf"
@@ -169,6 +172,10 @@ export type Block = {
   color?: string;
   url?: string;
   cells?: string[][];
+  /** toggle: nested blocks; columns: uses `cols` instead. */
+  children?: Block[];
+  open?: boolean;
+  cols?: Block[][];
 };
 
 export type Page = {
@@ -177,9 +184,85 @@ export type Page = {
   icon: string;
   cover: string | null;
   blocks: Block[];
+  favorite?: boolean;
+  fullWidth?: boolean;
   createdAt: string;
   updatedAt: string;
 };
+
+/** Page cover gradients. */
+export const PAGE_COVERS: { id: string; label: string; css: string }[] = [
+  { id: "none", label: "None", css: "" },
+  { id: "dawn", label: "Dawn", css: "linear-gradient(120deg, oklch(0.9 0.07 30), oklch(0.88 0.08 340))" },
+  { id: "sea", label: "Sea", css: "linear-gradient(120deg, oklch(0.88 0.07 230), oklch(0.9 0.06 190))" },
+  { id: "moss", label: "Moss", css: "linear-gradient(120deg, oklch(0.9 0.06 150), oklch(0.92 0.05 110))" },
+  { id: "dusk", label: "Dusk", css: "linear-gradient(120deg, oklch(0.62 0.11 285), oklch(0.5 0.12 250))" },
+  { id: "paper", label: "Paper", css: "linear-gradient(120deg, oklch(0.96 0.01 90), oklch(0.93 0.02 60))" },
+];
+
+export function pageCoverCss(id: string | null) {
+  return PAGE_COVERS.find((c) => c.id === id)?.css ?? "";
+}
+
+/** Flashcards + spaced repetition. */
+export type Flashcard = {
+  id: string;
+  front: string;
+  back: string;
+  /** ISO date the card is next due. */
+  due: string;
+  /** Days until the next review after the last rating. */
+  interval: number;
+  ease: number;
+  reps: number;
+};
+
+export type Deck = {
+  id: string;
+  name: string;
+  emoji: string;
+  cards: Flashcard[];
+  createdAt: string;
+};
+
+export type Grade = {
+  id: string;
+  subject: string;
+  title: string;
+  score: number;
+  max: number;
+  weight: number;
+  date: string;
+};
+
+export function emptyCard(front = "", back = ""): Flashcard {
+  return { id: uid(), front, back, due: new Date().toISOString().slice(0, 10), interval: 0, ease: 2.5, reps: 0 };
+}
+
+export function emptyDeck(name = "New deck", emoji = "🃏"): Deck {
+  return { id: uid(), name, emoji, cards: [], createdAt: new Date().toISOString() };
+}
+
+/** SM-2-lite scheduling. */
+export function scheduleCard(card: Flashcard, rating: "again" | "hard" | "good" | "easy"): Flashcard {
+  let ease = card.ease;
+  let interval = card.interval;
+  if (rating === "again") {
+    ease = Math.max(1.3, ease - 0.2);
+    interval = 0;
+  } else if (rating === "hard") {
+    ease = Math.max(1.3, ease - 0.15);
+    interval = Math.max(1, Math.round((interval || 1) * 1.2));
+  } else if (rating === "good") {
+    interval = interval === 0 ? 1 : Math.round(interval * ease);
+  } else {
+    ease = ease + 0.15;
+    interval = interval === 0 ? 3 : Math.round(interval * ease * 1.3);
+  }
+  const due = new Date();
+  due.setDate(due.getDate() + Math.max(0, interval));
+  return { ...card, ease, interval, reps: card.reps + 1, due: due.toISOString().slice(0, 10) };
+}
 
 export const BLOCK_MENU: { type: BlockType; label: string; emoji: string; hint: string }[] = [
   { type: "text", label: "Text", emoji: "¶", hint: "Plain paragraph" },
@@ -187,17 +270,21 @@ export const BLOCK_MENU: { type: BlockType; label: string; emoji: string; hint: 
   { type: "h2", label: "Heading 2", emoji: "H₂", hint: "Section title" },
   { type: "h3", label: "Heading 3", emoji: "H₃", hint: "Small title" },
   { type: "bullet", label: "Bulleted list", emoji: "•", hint: "One idea per line" },
+  { type: "numbered", label: "Numbered list", emoji: "1.", hint: "Ordered steps" },
   { type: "todo", label: "Checklist", emoji: "☑", hint: "Tickable task" },
+  { type: "toggle", label: "Toggle", emoji: "▸", hint: "Collapsible section" },
   { type: "quote", label: "Quote", emoji: "❝", hint: "Highlight a line" },
   { type: "callout", label: "Callout", emoji: "💡", hint: "Emoji + tinted box" },
   { type: "code", label: "Code", emoji: "‹›", hint: "Monospace block" },
   { type: "divider", label: "Divider", emoji: "―", hint: "Section break" },
   { type: "table", label: "Table", emoji: "▦", hint: "Editable grid" },
+  { type: "columns", label: "Two columns", emoji: "▥", hint: "Side-by-side stacks" },
   { type: "link", label: "Link card", emoji: "🔗", hint: "Bookmark a URL" },
   { type: "image", label: "Image", emoji: "🖼", hint: "Paste an image URL" },
   { type: "pdf", label: "PDF embed", emoji: "📄", hint: "Embed a PDF" },
   { type: "spotify", label: "Spotify", emoji: "🎧", hint: "Embed a playlist" },
 ];
+
 
 export const CALLOUT_COLORS = ["blue", "pink", "green", "amber", "purple"] as const;
 
@@ -249,6 +336,9 @@ export type Settings = {
   showPlannerTodo: boolean;
   appearance: Appearance;
   unlocks: Unlocks;
+  tutorialSeen: boolean;
+  focusGoal: number;
+
 };
 
 
@@ -309,6 +399,9 @@ export const DEFAULT_SETTINGS: Settings = {
   showPlannerTodo: true,
   appearance: DEFAULT_APPEARANCE,
   unlocks: DEFAULT_UNLOCKS,
+  tutorialSeen: false,
+  focusGoal: 120,
+
 };
 
 
@@ -372,6 +465,10 @@ export type State = {
   habits: Habit[];
   quickLinks: QuickLink[];
   pages: Page[];
+  decks: Deck[];
+  grades: Grade[];
+  /** ISO date -> focused minutes. */
+  focusLog: Record<string, number>;
 };
 
 function emptyState(): State {
@@ -387,6 +484,9 @@ function emptyState(): State {
     habits: DEFAULT_HABITS,
     quickLinks: [],
     pages: [],
+    decks: [],
+    grades: [],
+    focusLog: {},
   };
 }
 
@@ -397,6 +497,16 @@ export function emptyBlock(type: BlockType = "text"): Block {
     b.color = "blue";
   }
   if (type === "table") b.cells = [["", ""], ["", ""]];
+  if (type === "toggle") {
+    b.children = [{ id: uid(), type: "text", text: "" }];
+    b.open = true;
+  }
+  if (type === "columns") {
+    b.cols = [
+      [{ id: uid(), type: "text", text: "" }],
+      [{ id: uid(), type: "text", text: "" }],
+    ];
+  }
   return b;
 }
 
@@ -408,6 +518,8 @@ export function emptyPage(): Page {
     icon: "📄",
     cover: null,
     blocks: [emptyBlock("text")],
+    favorite: false,
+    fullWidth: false,
     createdAt: now,
     updatedAt: now,
   };
@@ -422,6 +534,16 @@ function migrateBlock(b: any): Block {
   if (typeof b?.url === "string") out.url = b.url;
   if (Array.isArray(b?.cells)) out.cells = b.cells.map((r: any) => (Array.isArray(r) ? r.map((c: any) => String(c ?? "")) : [""]));
   if (type === "table" && !out.cells) out.cells = [["", ""], ["", ""]];
+  if (Array.isArray(b?.children)) out.children = b.children.map(migrateBlock);
+  if (typeof b?.open === "boolean") out.open = b.open;
+  if (Array.isArray(b?.cols)) out.cols = b.cols.map((c: any) => (Array.isArray(c) ? c.map(migrateBlock) : []));
+  if (type === "toggle" && !out.children) out.children = [{ id: uid(), type: "text", text: "" }];
+  if (type === "columns" && !out.cols) {
+    out.cols = [
+      [{ id: uid(), type: "text", text: "" }],
+      [{ id: uid(), type: "text", text: "" }],
+    ];
+  }
   return out;
 }
 
@@ -433,10 +555,45 @@ function migratePage(p: any): Page {
     icon: typeof p?.icon === "string" && p.icon ? p.icon : "📄",
     cover: typeof p?.cover === "string" ? p.cover : null,
     blocks: Array.isArray(p?.blocks) ? p.blocks.map(migrateBlock) : [emptyBlock("text")],
+    favorite: !!p?.favorite,
+    fullWidth: !!p?.fullWidth,
     createdAt: typeof p?.createdAt === "string" ? p.createdAt : now,
     updatedAt: typeof p?.updatedAt === "string" ? p.updatedAt : now,
   };
 }
+
+function migrateDeck(d: any): Deck {
+  return {
+    id: d?.id ?? uid(),
+    name: typeof d?.name === "string" ? d.name : "Deck",
+    emoji: typeof d?.emoji === "string" && d.emoji ? d.emoji : "🃏",
+    createdAt: typeof d?.createdAt === "string" ? d.createdAt : new Date().toISOString(),
+    cards: Array.isArray(d?.cards)
+      ? d.cards.map((c: any) => ({
+          id: c?.id ?? uid(),
+          front: String(c?.front ?? ""),
+          back: String(c?.back ?? ""),
+          due: typeof c?.due === "string" ? c.due : new Date().toISOString().slice(0, 10),
+          interval: Number(c?.interval ?? 0),
+          ease: Number(c?.ease ?? 2.5),
+          reps: Number(c?.reps ?? 0),
+        }))
+      : [],
+  };
+}
+
+function migrateGrade(g: any): Grade {
+  return {
+    id: g?.id ?? uid(),
+    subject: String(g?.subject ?? ""),
+    title: String(g?.title ?? ""),
+    score: Number(g?.score ?? 0),
+    max: Number(g?.max ?? 100) || 100,
+    weight: Number(g?.weight ?? 1) || 1,
+    date: typeof g?.date === "string" ? g.date : new Date().toISOString().slice(0, 10),
+  };
+}
+
 
 
 function migrateRow(r: any): Row {
@@ -548,6 +705,13 @@ function normalizeState(parsed: any): State {
     habits: parsed?.habits?.length ? parsed.habits : base.habits,
     quickLinks: Array.isArray(parsed?.quickLinks) ? parsed.quickLinks : [],
     pages: Array.isArray(parsed?.pages) ? parsed.pages.map(migratePage) : [],
+    decks: Array.isArray(parsed?.decks) ? parsed.decks.map(migrateDeck) : [],
+    grades: Array.isArray(parsed?.grades) ? parsed.grades.map(migrateGrade) : [],
+    focusLog:
+      parsed?.focusLog && typeof parsed.focusLog === "object" && !Array.isArray(parsed.focusLog)
+        ? (parsed.focusLog as Record<string, number>)
+        : {},
+
   };
 
 }
@@ -882,6 +1046,16 @@ export function useStudyStore() {
     setHabits: setter("habits"),
     setQuickLinks: setter("quickLinks"),
     setPages: setter("pages"),
+    setDecks: setter("decks"),
+    setGrades: setter("grades"),
+    setFocusLog: setter("focusLog"),
+    logFocus: (minutes: number) => {
+      if (!minutes) return;
+      const key = new Date().toISOString().slice(0, 10);
+      const prev = (sharedState ?? emptyState()).focusLog ?? {};
+      update({ focusLog: { ...prev, [key]: Math.round((prev[key] ?? 0) + minutes) } });
+    },
+
 
     hydrated: isHydrated,
     userId,

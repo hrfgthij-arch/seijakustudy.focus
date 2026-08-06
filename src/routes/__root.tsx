@@ -9,6 +9,9 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { useStudyStore, THEMES, type ThemeId } from "@/lib/study-store";
+import { AppSidebar } from "@/components/AppSidebar";
+import { Tutorial } from "@/components/Tutorial";
+
 
 
 import appCss from "../styles.css?url";
@@ -177,7 +180,7 @@ function ThemePicker() {
   );
 }
 
-function NavBar() {
+function NavBar({ onMenu }: { onMenu: () => void }) {
   const [signedIn, setSignedIn] = useState(false);
   const { settings, setSettings } = useStudyStore();
   const [editing, setEditing] = useState(false);
@@ -197,27 +200,20 @@ function NavBar() {
   }
 
   return (
-    <nav className="sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-[color:var(--border)] bg-white/80 px-3 py-2 backdrop-blur md:gap-3 md:px-6">
-      <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-x-auto text-xs font-semibold [scrollbar-width:none] md:gap-3">
-        <Link to="/" className="shrink-0 text-sm font-bold text-primary">🌿 Seijaku</Link>
-        <Link to="/planner" className="shrink-0 text-muted-foreground hover:text-primary" activeProps={{ className: "text-primary" }}>Planner</Link>
-        <Link to="/progress" className="shrink-0 text-muted-foreground hover:text-primary" activeProps={{ className: "text-primary" }}>Progress</Link>
-        <Link to="/pages" className="shrink-0 text-muted-foreground hover:text-primary" activeProps={{ className: "text-primary" }}>Pages</Link>
-        <Link to="/todo" className="shrink-0 text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>To-do</Link>
-        <Link to="/links" className="shrink-0 text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>Links</Link>
-        <Link to="/sleep" className="shrink-0 text-muted-foreground hover:text-primary md:hidden" activeProps={{ className: "text-primary" }}>Sleep</Link>
-
+    <nav className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-[color:var(--border)] bg-white/80 px-3 py-2 backdrop-blur md:gap-3 md:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-2 text-xs font-semibold">
+        <button
+          onClick={onMenu}
+          aria-label="Open menu"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--border)] bg-white text-sm text-muted-foreground hover:border-primary hover:text-primary lg:hidden"
+        >
+          ☰
+        </button>
+        <Link to="/" className="shrink-0 text-sm font-bold text-primary">
+          🌿 Seijaku
+        </Link>
       </div>
       <div className="flex shrink-0 items-center gap-1.5 text-xs">
-        <Link
-          to="/settings"
-          title="Settings"
-          aria-label="Settings"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--border)] bg-white text-sm text-muted-foreground transition-transform hover:rotate-45 hover:border-primary hover:text-primary"
-          activeProps={{ className: "text-primary border-primary" }}
-        >
-          ⚙️
-        </Link>
         <ThemePicker />
 
         {signedIn ? (
@@ -266,14 +262,40 @@ function NavBar() {
   );
 }
 
+const SIDEBAR_KEY = "seijaku-sidebar-collapsed";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      setCollapsed(window.localStorage.getItem(SIDEBAR_KEY) === "1");
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    document.body.dataset.shell = collapsed ? "collapsed" : "expanded";
+    try {
+      window.localStorage.setItem(SIDEBAR_KEY, collapsed ? "1" : "0");
+    } catch {}
+  }, [collapsed]);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <NavBar />
-      <Outlet />
+      <AppSidebar
+        collapsed={collapsed}
+        setCollapsed={setCollapsed}
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
+      />
+      <div className="app-shell">
+        <NavBar onMenu={() => setMobileOpen(true)} />
+        <Outlet />
+      </div>
+      <Tutorial />
     </QueryClientProvider>
   );
 }
+
