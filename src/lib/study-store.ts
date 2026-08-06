@@ -149,12 +149,15 @@ export type BlockType =
   | "h3"
   | "text"
   | "bullet"
+  | "numbered"
   | "todo"
+  | "toggle"
   | "quote"
   | "callout"
   | "divider"
   | "code"
   | "table"
+  | "columns"
   | "link"
   | "image"
   | "pdf"
@@ -169,6 +172,10 @@ export type Block = {
   color?: string;
   url?: string;
   cells?: string[][];
+  /** toggle: nested blocks; columns: uses `cols` instead. */
+  children?: Block[];
+  open?: boolean;
+  cols?: Block[][];
 };
 
 export type Page = {
@@ -177,9 +184,85 @@ export type Page = {
   icon: string;
   cover: string | null;
   blocks: Block[];
+  favorite?: boolean;
+  fullWidth?: boolean;
   createdAt: string;
   updatedAt: string;
 };
+
+/** Page cover gradients. */
+export const PAGE_COVERS: { id: string; label: string; css: string }[] = [
+  { id: "none", label: "None", css: "" },
+  { id: "dawn", label: "Dawn", css: "linear-gradient(120deg, oklch(0.9 0.07 30), oklch(0.88 0.08 340))" },
+  { id: "sea", label: "Sea", css: "linear-gradient(120deg, oklch(0.88 0.07 230), oklch(0.9 0.06 190))" },
+  { id: "moss", label: "Moss", css: "linear-gradient(120deg, oklch(0.9 0.06 150), oklch(0.92 0.05 110))" },
+  { id: "dusk", label: "Dusk", css: "linear-gradient(120deg, oklch(0.62 0.11 285), oklch(0.5 0.12 250))" },
+  { id: "paper", label: "Paper", css: "linear-gradient(120deg, oklch(0.96 0.01 90), oklch(0.93 0.02 60))" },
+];
+
+export function pageCoverCss(id: string | null) {
+  return PAGE_COVERS.find((c) => c.id === id)?.css ?? "";
+}
+
+/** Flashcards + spaced repetition. */
+export type Flashcard = {
+  id: string;
+  front: string;
+  back: string;
+  /** ISO date the card is next due. */
+  due: string;
+  /** Days until the next review after the last rating. */
+  interval: number;
+  ease: number;
+  reps: number;
+};
+
+export type Deck = {
+  id: string;
+  name: string;
+  emoji: string;
+  cards: Flashcard[];
+  createdAt: string;
+};
+
+export type Grade = {
+  id: string;
+  subject: string;
+  title: string;
+  score: number;
+  max: number;
+  weight: number;
+  date: string;
+};
+
+export function emptyCard(front = "", back = ""): Flashcard {
+  return { id: uid(), front, back, due: new Date().toISOString().slice(0, 10), interval: 0, ease: 2.5, reps: 0 };
+}
+
+export function emptyDeck(name = "New deck", emoji = "🃏"): Deck {
+  return { id: uid(), name, emoji, cards: [], createdAt: new Date().toISOString() };
+}
+
+/** SM-2-lite scheduling. */
+export function scheduleCard(card: Flashcard, rating: "again" | "hard" | "good" | "easy"): Flashcard {
+  let ease = card.ease;
+  let interval = card.interval;
+  if (rating === "again") {
+    ease = Math.max(1.3, ease - 0.2);
+    interval = 0;
+  } else if (rating === "hard") {
+    ease = Math.max(1.3, ease - 0.15);
+    interval = Math.max(1, Math.round((interval || 1) * 1.2));
+  } else if (rating === "good") {
+    interval = interval === 0 ? 1 : Math.round(interval * ease);
+  } else {
+    ease = ease + 0.15;
+    interval = interval === 0 ? 3 : Math.round(interval * ease * 1.3);
+  }
+  const due = new Date();
+  due.setDate(due.getDate() + Math.max(0, interval));
+  return { ...card, ease, interval, reps: card.reps + 1, due: due.toISOString().slice(0, 10) };
+}
 
 export const BLOCK_MENU: { type: BlockType; label: string; emoji: string; hint: string }[] = [
   { type: "text", label: "Text", emoji: "¶", hint: "Plain paragraph" },
@@ -187,17 +270,21 @@ export const BLOCK_MENU: { type: BlockType; label: string; emoji: string; hint: 
   { type: "h2", label: "Heading 2", emoji: "H₂", hint: "Section title" },
   { type: "h3", label: "Heading 3", emoji: "H₃", hint: "Small title" },
   { type: "bullet", label: "Bulleted list", emoji: "•", hint: "One idea per line" },
+  { type: "numbered", label: "Numbered list", emoji: "1.", hint: "Ordered steps" },
   { type: "todo", label: "Checklist", emoji: "☑", hint: "Tickable task" },
+  { type: "toggle", label: "Toggle", emoji: "▸", hint: "Collapsible section" },
   { type: "quote", label: "Quote", emoji: "❝", hint: "Highlight a line" },
   { type: "callout", label: "Callout", emoji: "💡", hint: "Emoji + tinted box" },
   { type: "code", label: "Code", emoji: "‹›", hint: "Monospace block" },
   { type: "divider", label: "Divider", emoji: "―", hint: "Section break" },
   { type: "table", label: "Table", emoji: "▦", hint: "Editable grid" },
+  { type: "columns", label: "Two columns", emoji: "▥", hint: "Side-by-side stacks" },
   { type: "link", label: "Link card", emoji: "🔗", hint: "Bookmark a URL" },
   { type: "image", label: "Image", emoji: "🖼", hint: "Paste an image URL" },
   { type: "pdf", label: "PDF embed", emoji: "📄", hint: "Embed a PDF" },
   { type: "spotify", label: "Spotify", emoji: "🎧", hint: "Embed a playlist" },
 ];
+
 
 export const CALLOUT_COLORS = ["blue", "pink", "green", "amber", "purple"] as const;
 
