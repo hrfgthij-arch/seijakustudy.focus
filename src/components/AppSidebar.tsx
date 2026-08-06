@@ -70,7 +70,7 @@ export function AppSidebar({
 
   const width = collapsed ? "4.25rem" : "15rem";
 
-  const body = (
+  const renderBody = (collapsed: boolean) => (
     <div className="flex h-full flex-col gap-1 overflow-y-auto px-2 py-3">
       <div className={`mb-1 flex items-center ${collapsed ? "justify-center" : "justify-between"} px-1`}>
         {!collapsed && (
@@ -100,7 +100,7 @@ export function AppSidebar({
         return (
           <Link
             key={item.to}
-            to={item.to}
+            to={item.to as never}
             title={item.label}
             className={`group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-semibold transition-colors ${
               active
@@ -194,7 +194,7 @@ export function AppSidebar({
         style={{ width }}
         className="fixed inset-y-0 left-0 z-40 hidden border-r border-[color:var(--border)] bg-white/85 backdrop-blur transition-[width] duration-200 lg:block"
       >
-        {body}
+        {renderBody(collapsed)}
       </aside>
 
       {/* Mobile drawer */}
@@ -205,7 +205,7 @@ export function AppSidebar({
             style={{ width: "15rem" }}
             className="absolute inset-y-0 left-0 border-r border-[color:var(--border)] bg-white shadow-xl animate-sheet-up"
           >
-            {body}
+            {renderBody(false)}
           </div>
         </div>
       )}
