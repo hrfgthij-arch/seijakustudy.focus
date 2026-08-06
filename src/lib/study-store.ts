@@ -465,6 +465,10 @@ export type State = {
   habits: Habit[];
   quickLinks: QuickLink[];
   pages: Page[];
+  decks: Deck[];
+  grades: Grade[];
+  /** ISO date -> focused minutes. */
+  focusLog: Record<string, number>;
 };
 
 function emptyState(): State {
@@ -480,6 +484,9 @@ function emptyState(): State {
     habits: DEFAULT_HABITS,
     quickLinks: [],
     pages: [],
+    decks: [],
+    grades: [],
+    focusLog: {},
   };
 }
 
@@ -490,6 +497,16 @@ export function emptyBlock(type: BlockType = "text"): Block {
     b.color = "blue";
   }
   if (type === "table") b.cells = [["", ""], ["", ""]];
+  if (type === "toggle") {
+    b.children = [{ id: uid(), type: "text", text: "" }];
+    b.open = true;
+  }
+  if (type === "columns") {
+    b.cols = [
+      [{ id: uid(), type: "text", text: "" }],
+      [{ id: uid(), type: "text", text: "" }],
+    ];
+  }
   return b;
 }
 
@@ -501,6 +518,8 @@ export function emptyPage(): Page {
     icon: "📄",
     cover: null,
     blocks: [emptyBlock("text")],
+    favorite: false,
+    fullWidth: false,
     createdAt: now,
     updatedAt: now,
   };
@@ -515,6 +534,16 @@ function migrateBlock(b: any): Block {
   if (typeof b?.url === "string") out.url = b.url;
   if (Array.isArray(b?.cells)) out.cells = b.cells.map((r: any) => (Array.isArray(r) ? r.map((c: any) => String(c ?? "")) : [""]));
   if (type === "table" && !out.cells) out.cells = [["", ""], ["", ""]];
+  if (Array.isArray(b?.children)) out.children = b.children.map(migrateBlock);
+  if (typeof b?.open === "boolean") out.open = b.open;
+  if (Array.isArray(b?.cols)) out.cols = b.cols.map((c: any) => (Array.isArray(c) ? c.map(migrateBlock) : []));
+  if (type === "toggle" && !out.children) out.children = [{ id: uid(), type: "text", text: "" }];
+  if (type === "columns" && !out.cols) {
+    out.cols = [
+      [{ id: uid(), type: "text", text: "" }],
+      [{ id: uid(), type: "text", text: "" }],
+    ];
+  }
   return out;
 }
 
@@ -526,10 +555,45 @@ function migratePage(p: any): Page {
     icon: typeof p?.icon === "string" && p.icon ? p.icon : "📄",
     cover: typeof p?.cover === "string" ? p.cover : null,
     blocks: Array.isArray(p?.blocks) ? p.blocks.map(migrateBlock) : [emptyBlock("text")],
+    favorite: !!p?.favorite,
+    fullWidth: !!p?.fullWidth,
     createdAt: typeof p?.createdAt === "string" ? p.createdAt : now,
     updatedAt: typeof p?.updatedAt === "string" ? p.updatedAt : now,
   };
 }
+
+function migrateDeck(d: any): Deck {
+  return {
+    id: d?.id ?? uid(),
+    name: typeof d?.name === "string" ? d.name : "Deck",
+    emoji: typeof d?.emoji === "string" && d.emoji ? d.emoji : "🃏",
+    createdAt: typeof d?.createdAt === "string" ? d.createdAt : new Date().toISOString(),
+    cards: Array.isArray(d?.cards)
+      ? d.cards.map((c: any) => ({
+          id: c?.id ?? uid(),
+          front: String(c?.front ?? ""),
+          back: String(c?.back ?? ""),
+          due: typeof c?.due === "string" ? c.due : new Date().toISOString().slice(0, 10),
+          interval: Number(c?.interval ?? 0),
+          ease: Number(c?.ease ?? 2.5),
+          reps: Number(c?.reps ?? 0),
+        }))
+      : [],
+  };
+}
+
+function migrateGrade(g: any): Grade {
+  return {
+    id: g?.id ?? uid(),
+    subject: String(g?.subject ?? ""),
+    title: String(g?.title ?? ""),
+    score: Number(g?.score ?? 0),
+    max: Number(g?.max ?? 100) || 100,
+    weight: Number(g?.weight ?? 1) || 1,
+    date: typeof g?.date === "string" ? g.date : new Date().toISOString().slice(0, 10),
+  };
+}
+
 
 
 function migrateRow(r: any): Row {
