@@ -705,6 +705,13 @@ function normalizeState(parsed: any): State {
     habits: parsed?.habits?.length ? parsed.habits : base.habits,
     quickLinks: Array.isArray(parsed?.quickLinks) ? parsed.quickLinks : [],
     pages: Array.isArray(parsed?.pages) ? parsed.pages.map(migratePage) : [],
+    decks: Array.isArray(parsed?.decks) ? parsed.decks.map(migrateDeck) : [],
+    grades: Array.isArray(parsed?.grades) ? parsed.grades.map(migrateGrade) : [],
+    focusLog:
+      parsed?.focusLog && typeof parsed.focusLog === "object" && !Array.isArray(parsed.focusLog)
+        ? (parsed.focusLog as Record<string, number>)
+        : {},
+
   };
 
 }
