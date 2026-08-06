@@ -479,3 +479,58 @@ html, body { max-width: 100%; overflow-x: hidden; }
   }
 }
 
+
+/* ---------------------------------------------------------------
+ * Paper surface (custom pages) + shared polish
+ * --------------------------------------------------------------- */
+
+:root {
+  --paper: oklch(0.995 0.001 90);
+  --paper-fg: oklch(0.26 0.01 260);
+  --paper-border: oklch(0.9 0.005 90);
+  --paper-canvas: oklch(0.975 0.002 90);
+}
+
+[data-theme="midnight"] {
+  --paper: oklch(0.23 0.02 265);
+  --paper-fg: oklch(0.95 0.01 255);
+  --paper-border: oklch(0.34 0.03 265);
+  --paper-canvas: oklch(0.18 0.02 265);
+}
+
+.paper-canvas { background: var(--paper-canvas); color: var(--paper-fg); }
+.paper-sheet {
+  background: var(--paper);
+  color: var(--paper-fg);
+  border: 1px solid var(--paper-border);
+}
+.paper-sheet .text-muted-foreground { color: color-mix(in oklab, var(--paper-fg) 55%, transparent); }
+
+/* Gentle entrance for cards and list rows */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@utility animate-rise-in { animation: rise-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes soft-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@utility animate-soft-float { animation: soft-float 6s ease-in-out infinite; }
+
+/* Nicer scrollbars */
+* { scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--primary) 35%, transparent) transparent; }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--primary) 30%, transparent);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover { background: color-mix(in oklab, var(--primary) 50%, transparent); }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* App shell: leave room for the desktop sidebar */
+@media (min-width: 1024px) {
+  body[data-shell="expanded"] .app-shell { padding-left: 15rem; }
+  body[data-shell="collapsed"] .app-shell { padding-left: 4.25rem; }
+}
