@@ -9,6 +9,9 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { useStudyStore, THEMES, type ThemeId } from "@/lib/study-store";
+import { AppSidebar } from "@/components/AppSidebar";
+import { Tutorial } from "@/components/Tutorial";
+
 
 
 import appCss from "../styles.css?url";
