@@ -347,9 +347,11 @@ export function AddBlockMenu({ onAdd, label = "+ Add a block" }: { onAdd: (type:
 export function BlockList({
   blocks,
   onChange,
+  nested = false,
 }: {
   blocks: Block[];
   onChange: (next: Block[]) => void;
+  nested?: boolean;
 }) {
   const [dragId, setDragId] = useState<string | null>(null);
 
@@ -385,7 +387,7 @@ export function BlockList({
 
   return (
     <div className="space-y-1">
-      {blocks.map((b) => (
+      {blocks.map((b, i) => (
         <div
           key={b.id}
           onDragOver={(e) => e.preventDefault()}
@@ -405,7 +407,11 @@ export function BlockList({
               ⠿
             </span>
             <div className="min-w-0 flex-1">
-              <BlockView block={b} onChange={(p) => patch(b.id, p)} />
+              <BlockView
+                block={b}
+                index={blocks.slice(0, i + 1).filter((x) => x.type === "numbered").length}
+                onChange={(p) => patch(b.id, p)}
+              />
             </div>
             <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
               <button onClick={() => insertAfter(b.id, "text")} title="Add block below" className="rounded px-1 text-xs text-muted-foreground hover:text-primary">
@@ -421,8 +427,8 @@ export function BlockList({
           </div>
         </div>
       ))}
-      <div className="pt-2">
-        <AddBlockMenu onAdd={(t) => insertAfter(null, t)} />
+      <div className={nested ? "pt-1" : "pt-2"}>
+        <AddBlockMenu onAdd={(t) => insertAfter(null, t)} label={nested ? "+ Block" : "+ Add a block"} />
       </div>
     </div>
   );
