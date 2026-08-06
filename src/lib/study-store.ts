@@ -1046,6 +1046,16 @@ export function useStudyStore() {
     setHabits: setter("habits"),
     setQuickLinks: setter("quickLinks"),
     setPages: setter("pages"),
+    setDecks: setter("decks"),
+    setGrades: setter("grades"),
+    setFocusLog: setter("focusLog"),
+    logFocus: (minutes: number) => {
+      if (!minutes) return;
+      const key = new Date().toISOString().slice(0, 10);
+      const prev = (sharedState ?? emptyState()).focusLog ?? {};
+      update({ focusLog: { ...prev, [key]: Math.round((prev[key] ?? 0) + minutes) } });
+    },
+
 
     hydrated: isHydrated,
     userId,
