@@ -336,6 +336,9 @@ export type Settings = {
   showPlannerTodo: boolean;
   appearance: Appearance;
   unlocks: Unlocks;
+  tutorialSeen: boolean;
+  focusGoal: number;
+
 };
 
 
