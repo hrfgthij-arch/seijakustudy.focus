@@ -135,7 +135,7 @@ export type TimerBackground = {
 
 export type TimerDisplay = {
   theme: "light" | "dark";
-  style: "digital" | "flip" | "minimal";
+  style: "digital" | "minimal";
   showSeconds: boolean;
   showDate: boolean;
   showTimer: boolean;
@@ -690,6 +690,7 @@ function normalizeState(parsed: any): State {
       timerDisplay: {
         ...base.settings.timerDisplay,
         ...(parsed?.settings?.timerDisplay ?? {}),
+        style: parsed?.settings?.timerDisplay?.style === "minimal" ? "minimal" : "digital",
         background: {
           ...base.settings.timerDisplay.background,
           ...(parsed?.settings?.timerDisplay?.background ?? {}),

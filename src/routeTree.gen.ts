@@ -15,6 +15,9 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as PlannerRouteImport } from './routes/planner'
 import { Route as LinksRouteImport } from './routes/links'
+import { Route as GradesRouteImport } from './routes/grades'
+import { Route as FlashcardsRouteImport } from './routes/flashcards'
+import { Route as DeadlinesRouteImport } from './routes/deadlines'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PagesIndexRouteImport } from './routes/pages.index'
@@ -50,6 +53,21 @@ const LinksRoute = LinksRouteImport.update({
   path: '/links',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GradesRoute = GradesRouteImport.update({
+  id: '/grades',
+  path: '/grades',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FlashcardsRoute = FlashcardsRouteImport.update({
+  id: '/flashcards',
+  path: '/flashcards',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeadlinesRoute = DeadlinesRouteImport.update({
+  id: '/deadlines',
+  path: '/deadlines',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -74,6 +92,9 @@ const PagesPageIdRoute = PagesPageIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/deadlines': typeof DeadlinesRoute
+  '/flashcards': typeof FlashcardsRoute
+  '/grades': typeof GradesRoute
   '/links': typeof LinksRoute
   '/planner': typeof PlannerRoute
   '/progress': typeof ProgressRoute
@@ -86,6 +107,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/deadlines': typeof DeadlinesRoute
+  '/flashcards': typeof FlashcardsRoute
+  '/grades': typeof GradesRoute
   '/links': typeof LinksRoute
   '/planner': typeof PlannerRoute
   '/progress': typeof ProgressRoute
@@ -99,6 +123,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/deadlines': typeof DeadlinesRoute
+  '/flashcards': typeof FlashcardsRoute
+  '/grades': typeof GradesRoute
   '/links': typeof LinksRoute
   '/planner': typeof PlannerRoute
   '/progress': typeof ProgressRoute
@@ -113,6 +140,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/deadlines'
+    | '/flashcards'
+    | '/grades'
     | '/links'
     | '/planner'
     | '/progress'
@@ -125,6 +155,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/deadlines'
+    | '/flashcards'
+    | '/grades'
     | '/links'
     | '/planner'
     | '/progress'
@@ -137,6 +170,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/auth'
+    | '/deadlines'
+    | '/flashcards'
+    | '/grades'
     | '/links'
     | '/planner'
     | '/progress'
@@ -150,6 +186,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  DeadlinesRoute: typeof DeadlinesRoute
+  FlashcardsRoute: typeof FlashcardsRoute
+  GradesRoute: typeof GradesRoute
   LinksRoute: typeof LinksRoute
   PlannerRoute: typeof PlannerRoute
   ProgressRoute: typeof ProgressRoute
@@ -204,6 +243,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LinksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/grades': {
+      id: '/grades'
+      path: '/grades'
+      fullPath: '/grades'
+      preLoaderRoute: typeof GradesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/flashcards': {
+      id: '/flashcards'
+      path: '/flashcards'
+      fullPath: '/flashcards'
+      preLoaderRoute: typeof FlashcardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/deadlines': {
+      id: '/deadlines'
+      path: '/deadlines'
+      fullPath: '/deadlines'
+      preLoaderRoute: typeof DeadlinesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -238,6 +298,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  DeadlinesRoute: DeadlinesRoute,
+  FlashcardsRoute: FlashcardsRoute,
+  GradesRoute: GradesRoute,
   LinksRoute: LinksRoute,
   PlannerRoute: PlannerRoute,
   ProgressRoute: ProgressRoute,

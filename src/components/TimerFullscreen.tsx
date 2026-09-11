@@ -134,7 +134,6 @@ export function TimerFullscreen({
                   }`}
                 >
                   <option value="digital">Digital</option>
-                  <option value="flip">Flip clock</option>
                   <option value="minimal">Minimal</option>
                 </select>
               </label>
@@ -227,7 +226,7 @@ export function TimerFullscreen({
       </div>
 
       <div className="flex flex-col items-center gap-6 px-6 text-center">
-        <ClockDisplay style={display.style} time={timeStr} dark={dark} />
+        <ClockDisplay style={display.style} time={timeStr} />
         {display.showDate && (
           <div className="text-sm uppercase tracking-[0.3em] opacity-70">{dateStr}</div>
         )}
@@ -310,63 +309,9 @@ export function TimerFullscreen({
   );
 }
 
-function ClockDisplay({ style, time, dark }: { style: TimerDisplay["style"]; time: string; dark: boolean }) {
+function ClockDisplay({ style, time }: { style: TimerDisplay["style"]; time: string }) {
   if (style === "minimal") {
     return <div className="font-mono text-6xl font-light tabular-nums md:text-[9rem]">{time}</div>;
   }
-  if (style === "flip") {
-    return (
-      <div className="flex items-center gap-2 md:gap-3">
-        {time.split("").map((ch, i) =>
-          ch === ":" ? (
-            <span
-              key={i}
-              className={`self-center text-5xl font-bold md:text-8xl ${
-                dark ? "text-white/50 animate-pulse" : "text-primary/60 animate-pulse"
-              }`}
-            >
-              :
-            </span>
-          ) : (
-            <FlipCard key={i} digit={ch} dark={dark} />
-          ),
-        )}
-      </div>
-    );
-  }
   return <div className="font-mono text-7xl font-bold tabular-nums md:text-[10rem]">{time}</div>;
-}
-
-function FlipCard({ digit, dark }: { digit: string; dark: boolean }) {
-  return (
-    <div
-      className={`relative overflow-hidden rounded-2xl border shadow-xl ${
-        dark
-          ? "border-white/10 bg-gradient-to-b from-[oklch(0.28_0.06_260)] to-[oklch(0.14_0.04_260)]"
-          : "border-black/10 bg-gradient-to-b from-[oklch(0.28_0.06_260)] to-[oklch(0.16_0.04_260)]"
-      }`}
-      style={{
-        width: "clamp(4rem, 12vw, 8rem)",
-        height: "clamp(6rem, 17vw, 11rem)",
-      }}
-    >
-      {/* Center split line for that flip-clock look */}
-      <div className="pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-black/50" />
-      {/* Subtle top-half sheen */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/10 to-transparent" />
-      <span
-        key={digit}
-        className="flex h-full w-full items-center justify-center font-mono font-bold tabular-nums text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]"
-        style={{ fontSize: "clamp(3rem, 9vw, 6.5rem)", animation: "flipIn 0.35s ease-out" }}
-      >
-        {digit}
-      </span>
-      <style>{`
-        @keyframes flipIn {
-          0% { transform: rotateX(-90deg); opacity: 0; }
-          100% { transform: rotateX(0); opacity: 1; }
-        }
-      `}</style>
-    </div>
-  );
 }
