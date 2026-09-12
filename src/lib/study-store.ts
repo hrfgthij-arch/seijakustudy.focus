@@ -14,6 +14,7 @@ export type Row = {
   time: string | null;
   dueDate: string | null;
   priorityId: string | null;
+  completedAt?: string | null;
 };
 
 /** Maximum number of user-defined columns in the lessons table. */
@@ -29,7 +30,7 @@ export type SleepEntry = {
   wakeTime?: string | null;
 };
 
-export type Todo = { id: string; text: string; done: boolean; createdAt: string };
+export type Todo = { id: string; text: string; done: boolean; createdAt: string; doneAt?: string | null };
 
 // Planner: `subjects` is the multi-subject field; `subject` kept for backward compat.
 // `week` is the ISO date of that week's first day — each week gets a fresh table.
@@ -605,6 +606,7 @@ function migrateRow(r: any): Row {
     time: r.time ?? null,
     dueDate: r.dueDate ?? null,
     priorityId: r.priorityId ?? null,
+    completedAt: typeof r.completedAt === "string" ? r.completedAt : null,
   };
 }
 
