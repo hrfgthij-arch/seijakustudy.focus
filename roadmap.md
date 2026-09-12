@@ -1,0 +1,5 @@
+- [ ] Remove completed to-dos and lessons two hours after completion
+- [ ] Add movable and resizable home widgets with saved layout
+- [ ] Keep the Pomodoro timer beside the header/banner area
+- [ ] Show short lesson descriptions with full hover previews
+- [ ] Validate typecheck, build diagnostics, and the live home page

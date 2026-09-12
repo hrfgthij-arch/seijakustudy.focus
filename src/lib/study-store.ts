@@ -14,6 +14,7 @@ export type Row = {
   time: string | null;
   dueDate: string | null;
   priorityId: string | null;
+  completedAt?: string | null;
 };
 
 /** Maximum number of user-defined columns in the lessons table. */
@@ -29,7 +30,9 @@ export type SleepEntry = {
   wakeTime?: string | null;
 };
 
-export type Todo = { id: string; text: string; done: boolean; createdAt: string };
+export type Todo = { id: string; text: string; done: boolean; createdAt: string; doneAt?: string | null };
+
+export type HomeWidgetLayout = { x: number; y: number; width?: number; height?: number };
 
 // Planner: `subjects` is the multi-subject field; `subject` kept for backward compat.
 // `week` is the ISO date of that week's first day — each week gets a fresh table.
@@ -605,7 +608,28 @@ function migrateRow(r: any): Row {
     time: r.time ?? null,
     dueDate: r.dueDate ?? null,
     priorityId: r.priorityId ?? null,
+    completedAt: typeof r.completedAt === "string" ? r.completedAt : null,
   };
+}
+
+function migrateTodo(t: any): Todo {
+  return {
+    id: t?.id ?? uid(),
+    text: String(t?.text ?? ""),
+    done: !!t?.done,
+    createdAt: typeof t?.createdAt === "string" ? t.createdAt : new Date().toISOString(),
+    doneAt: typeof t?.doneAt === "string" ? t.doneAt : null,
+  };
+}
+
+const COMPLETION_RETENTION_MS = 2 * 60 * 60 * 1000;
+
+function removeExpiredCompleted(state: State): State {
+  const now = Date.now();
+  const rows = state.rows.filter((row) => !row.completedAt || now - Date.parse(row.completedAt) < COMPLETION_RETENTION_MS);
+  const todos = state.todos.filter((todo) => !todo.doneAt || now - Date.parse(todo.doneAt) < COMPLETION_RETENTION_MS);
+  if (rows.length === state.rows.length && todos.length === state.todos.length) return state;
+  return { ...state, rows, todos };
 }
 
 
@@ -674,7 +698,7 @@ function normalizeState(parsed: any): State {
   const plannerEvents: PlannerEvent[] = Array.isArray(parsed?.plannerEvents)
     ? parsed.plannerEvents.map(migrateEvent)
     : slotsToEvents(plannerSlots);
-  return {
+  return removeExpiredCompleted({
     columns: parsed?.columns?.length ? parsed.columns : base.columns,
     rows: (parsed?.rows ?? []).map(migrateRow),
     priorities: parsed?.priorities?.length ? parsed.priorities : base.priorities,
@@ -700,7 +724,7 @@ function normalizeState(parsed: any): State {
       unlocks: { ...base.settings.unlocks, ...(parsed?.settings?.unlocks ?? {}) },
     },
     sleep: parsed?.sleep ?? [],
-    todos: parsed?.todos ?? [],
+    todos: Array.isArray(parsed?.todos) ? parsed.todos.map(migrateTodo) : [],
     plannerSlots,
     plannerEvents,
     habits: parsed?.habits?.length ? parsed.habits : base.habits,
@@ -713,7 +737,7 @@ function normalizeState(parsed: any): State {
         ? (parsed.focusLog as Record<string, number>)
         : {},
 
-  };
+  });
 
 }
 
@@ -995,6 +1019,19 @@ export function useStudyStore() {
     const nextVal = typeof value === "function" ? (value as (p: State[K]) => State[K])(prev) : value;
     update({ [key]: nextVal } as Partial<State>);
   };
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    const clean = () => {
+      const current = sharedState;
+      if (!current) return;
+      const next = removeExpiredCompleted(current);
+      if (next !== current) setSharedState(next);
+    };
+    clean();
+    const timer = window.setInterval(clean, 30_000);
+    return () => window.clearInterval(timer);
+  }, [isHydrated]);
 
   const mergeGuestSnapshot = useCallback(() => {
     if (!guestSnapshot) return;
