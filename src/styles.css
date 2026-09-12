@@ -546,3 +546,8 @@ html, body { max-width: 100%; overflow-x: hidden; }
   body[data-shell="expanded"] .app-shell { padding-left: 15rem; }
   body[data-shell="collapsed"] .app-shell { padding-left: 4.25rem; }
 }
+[class*="lovable"],
+[id*="lovable"],
+a[href*="lovable.dev"] {
+  display: none !important;
+}
