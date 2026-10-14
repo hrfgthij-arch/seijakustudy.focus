@@ -551,3 +551,8 @@ html, body { max-width: 100%; overflow-x: hidden; }
 a[href*="lovable.dev"] {
   display: none !important;
 }
+#gptengineer-badge,
+[id*="lovable"],
+[class*="lovable"] {
+  display: none !important;
+}
